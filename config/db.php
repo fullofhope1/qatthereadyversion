@@ -1,9 +1,9 @@
 <?php
 // config/db.php
-$host = 'localhost';
-$dbname = 'qat_erp';
-$username = 'root';
-$password = ''; // Default XAMPP password
+$host = 'sql111.infinityfree.com'; // Your MySQL Host Name
+$dbname = 'if0_41103629_qat';     // Your MySQL DB Name
+$username = 'if0_41103629';       // Your MySQL User Name
+$password = 'HpnYShAsAaK';         // Your vPanel Password
 
 // Set Timezone for PHP
 date_default_timezone_set('Asia/Aden');
