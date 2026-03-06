@@ -1,0 +1,24 @@
+ID: 1 | User: [super admin] | Role: [super_admin] | RoleHex: [73757065725F61646D696E] | SubRole: [full] | SubHex: [66756C6C]
+ID: 2 | User: [admin] | Role: [super_admin] | RoleHex: [73757065725F61646D696E] | SubRole: [full] | SubHex: [66756C6C]
+ID: 3 | User: [admin1] | Role: [user] | RoleHex: [75736572] | SubRole: [full] | SubHex: [66756C6C]
+ID: 4 | User: [abood] | Role: [user] | RoleHex: [75736572] | SubRole: [full] | SubHex: [66756C6C]
+ID: 5 | User: [Abdul] | Role: [super_admin] | RoleHex: [73757065725F61646D696E] | SubRole: [reports] | SubHex: [7265706F727473]
+ID: 6 | User: [Mohammed] | Role: [super_admin] | RoleHex: [73757065725F61646D696E] | SubRole: [full] | SubHex: [66756C6C]
+ID: 7 | User: [Abdullah] | Role: [super_admin] | RoleHex: [73757065725F61646D696E] | SubRole: [sales_debts] | SubHex: [73616C65735F6465627473]
+ID: 8 | User: [Aham] | Role: [super_admin] | RoleHex: [73757065725F61646D696E] | SubRole: [receiving] | SubHex: [726563656976696E67]
+ID: 9 | User: [202310400240] | Role: [user] | RoleHex: [75736572] | SubRole: [full] | SubHex: [66756C6C]
+ID: 10 | User: [2023104002] | Role: [user] | RoleHex: [75736572] | SubRole: [full] | SubHex: [66756C6C]
+ID: 11 | User: [ali] | Role: [user] | RoleHex: [75736572] | SubRole: [full] | SubHex: [66756C6C]
+ID: 12 | User: [ad] | Role: [user] | RoleHex: [75736572] | SubRole: [full] | SubHex: [66756C6C]
+ID: 13 | User: [testadmin] | Role: [super_admin] | RoleHex: [73757065725F61646D696E] | SubRole: [full] | SubHex: [66756C6C]
+ID: 14 | User: [four] | Role: [user] | RoleHex: [75736572] | SubRole: [full] | SubHex: [66756C6C]
+ID: 15 | User: [three] | Role: [user] | RoleHex: [75736572] | SubRole: [full] | SubHex: [66756C6C]
+ID: 16 | User: [two] | Role: [user] | RoleHex: [75736572] | SubRole: [full] | SubHex: [66756C6C]
+ID: 17 | User: [one] | Role: [user] | RoleHex: [75736572] | SubRole: [full] | SubHex: [66756C6C]
+ID: 18 | User: [alqadri] | Role: [] | RoleHex: [] | SubRole: [full] | SubHex: [66756C6C]
+
+--- DB Variable Check ---
+array (
+  'Variable_name' => 'character_set_database',
+  'Value' => 'utf8mb4',
+)

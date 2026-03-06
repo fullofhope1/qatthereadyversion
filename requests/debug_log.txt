@@ -1,0 +1,8 @@
+2026-03-05 23:05:18 | Action: list | Session Role: unset | SubRole: unset
+2026-03-05 23:08:09 | Action: list | Session Role: admin | SubRole: full
+2026-03-05 23:08:15 | Action: list | Session Role: super_admin | SubRole: full
+2026-03-05 23:08:19 | Action: list | Session Role: super_admin | SubRole: full
+2026-03-05 23:08:22 | Action: list | Session Role: super_admin | SubRole: full
+2026-03-06 01:51:34 | Action: list | Session Role: super_admin | SubRole: full
+2026-03-06 13:10:04 | Action: list | Session: {"user_id":1,"username":"super admin","role":"super_admin","sub_role":"full"}
+2026-03-06 13:17:19 | Action: list | Session: {"user_id":1,"username":"super admin","role":"super_admin","sub_role":"full"}

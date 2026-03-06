@@ -1,0 +1,4 @@
+--- DAILY DEBT INVENTORY ---
+Date: 2026-02-17 | Count: 8 | Total: 56000.00
+
+--- PURCHASES INVENTORY ---
