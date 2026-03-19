@@ -1,9 +1,21 @@
 <?php
 // config/db.php
-$servername = "sql100.hstn.me";
-$username = "mseet_41427862";
-$password = "zt92DPSWefgb"; // Your FTP/vPanel password
-$dbname = "mseet_41427862_qat_erp";
+// Detect Environment
+$is_localhost = in_array($_SERVER['REMOTE_ADDR'] ?? '', ['127.0.0.1', '::1']) || strpos($_SERVER['HTTP_HOST'] ?? '', 'localhost') !== false;
+
+if ($is_localhost) {
+    // Local XAMPP Credentials
+    $servername = "localhost";
+    $username = "root";
+    $password = "";
+    $dbname = "qat_erp";
+} else {
+    // Live Server Credentials
+    $servername = "sql100.hstn.me";
+    $username = "mseet_41427862";
+    $password = "zt92DPSWefgb";
+    $dbname = "mseet_41427862_qat_erp";
+}
 
 date_default_timezone_set('Asia/Aden');
 
