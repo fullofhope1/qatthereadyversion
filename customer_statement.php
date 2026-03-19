@@ -158,7 +158,7 @@ $business_name = "القادري و ماجد - لأجود أنواع القات"
             </button>
             <?php
             $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
-            $stmtUrl  = $protocol . '://' . $_SERVER['HTTP_HOST'] . '/qat/customer_statement.php?id=' . $id;
+            $stmtUrl  = $protocol . '://' . $_SERVER['HTTP_HOST'] . '/customer_statement.php?id=' . $id;
             // WhatsApp: send the PDF/statement link - user prints or saves as PDF then shares
             $waMsg = rawurlencode(
                 "مرحباً *{$customer['name']}* 👋\n\n" .
