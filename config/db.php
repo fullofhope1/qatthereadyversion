@@ -1,15 +1,16 @@
 <?php
 // config/db.php
-$host = 'localhost';      // Local server name
-$dbname = 'qat_erp';           // Your local database name in phpMyAdmin
-$username = 'root';        // Default XAMPP username
-$password = '';
+$servername = "sql111.infinityfree.com";
+$username = "if0_41103629";
+$password = "HpnYShAsAaK";
+$dbname = "if0_41103629_qat";
 
 // Set Timezone for PHP
 date_default_timezone_set('Asia/Aden');
 
 try {
-    $pdo = new PDO("mysql:host=$host;dbname=$dbname;charset=utf8", $username, $password);
+    // Fixed: Changed $host to $servername to match your variable above
+    $pdo = new PDO("mysql:host=$servername;dbname=$dbname;charset=utf8", $username, $password);
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
     $pdo->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
 
