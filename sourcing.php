@@ -227,7 +227,7 @@ $shipments = $purchaseRepo->getTodayShipmentsByUserId($today, $user_id);
                 <div class="form-step active" id="step-1">
                     <div class="mb-4">
                         <label class="input-label-premium">تاريخ العملية</label>
-                        <input type="date" class="form-control form-control-lg rounded-4" name="purchase_date" value="<?= date('Y-m-d') ?>" required>
+                        <input type="date" class="form-control form-control-lg rounded-4" name="purchase_date" id="purchase_date" value="<?= date('Y-m-d') ?>" required enterkeyhint="next">
                     </div>
 
                     <div class="mb-4">
@@ -280,7 +280,7 @@ $shipments = $purchaseRepo->getTodayShipmentsByUserId($today, $user_id);
                     </div>
 
                     <div class="text-end mt-5">
-                        <button type="button" class="btn btn-primary btn-lg px-5 rounded-pill fw-bold" onclick="nextStep(2)">
+                        <button type="button" class="btn btn-primary btn-lg px-5 rounded-pill fw-bold" id="btn-step-1-next" onclick="nextStep(2)">
                             التالي <i class="fas fa-arrow-left ms-2"></i>
                         </button>
                     </div>
@@ -345,19 +345,25 @@ $shipments = $purchaseRepo->getTodayShipmentsByUserId($today, $user_id);
                         <button type="button" class="btn btn-outline-secondary btn-lg px-4 rounded-pill" onclick="nextStep(1)">
                             <i class="fas fa-arrow-right me-2"></i> السابق
                         </button>
-                        <button type="button" class="btn btn-primary btn-lg px-5 rounded-pill fw-bold" onclick="nextStep(3)">
-                            التالي <i class="fas fa-arrow-left ms-2"></i>
-                        </button>
+                        <button type="button" class="btn btn-primary btn-nav w-100" id="btn-step-3-weight" onclick="nextStep(3)">الخطوة التالية <i class="fas fa-arrow-left ms-2"></i></button>
                     </div>
                 </div>
 
                 <!-- Step 3: Confirmation & Media -->
                 <div class="form-step" id="step-3">
                     <div class="mb-4 text-center py-4 bg-light rounded-4">
-                        <i class="fas fa-cloud-upload-alt fa-4x text-muted mb-3"></i>
+                        <i class="fas fa-cloud-upload-alt fa-4x text-muted mb-3" id="uploadIcon"></i>
                         <h5 class="fw-bold">صورة الشحنة (اختياري)</h5>
                         <p class="text-muted small">يمكنك رفع صورة للنوع أو الميزان لتوثيق الجودة</p>
-                        <input type="file" name="media" class="form-control w-75 mx-auto rounded-3" accept="image/*">
+                        <input type="file" name="media" id="mediaInput" class="form-control w-75 mx-auto rounded-3" accept="image/*" onchange="previewImage(this)">
+                        <!-- Image preview shown after selection -->
+                        <div id="imgPreviewBox" class="d-none mt-3">
+                            <img id="imgPreview" src="" alt="معاينة الصورة" class="rounded-3 shadow" style="max-height:180px; max-width:100%; border:3px solid #198754;">
+                            <div class="mt-2">
+                                <span class="badge bg-success fs-6"><i class="fas fa-check-circle me-1"></i>تم اختيار الصورة</span>
+                                <button type="button" class="btn btn-sm btn-outline-danger ms-2" onclick="clearImage()"><i class="fas fa-times me-1"></i>إزالة</button>
+                            </div>
+                        </div>
                     </div>
 
                     <div class="alert alert-warning border-0 rounded-4">
@@ -462,11 +468,16 @@ $shipments = $purchaseRepo->getTodayShipmentsByUserId($today, $user_id);
                 </div>
                 <div class="mb-3">
                     <label class="small fw-bold mb-1">رقم الهاتف <span class="text-danger">*</span></label>
-                    <input type="tel" id="new_provider_phone" class="form-control rounded-3" required inputmode="numeric" placeholder="7xxxxxxxxx">
+                    <div class="input-group">
+                        <input type="tel" id="new_provider_phone" class="form-control rounded-start-3" required inputmode="numeric" placeholder="7xxxxxxxxx" enterkeyhint="done">
+                        <button type="button" class="btn btn-warning rounded-end-3" onclick="pickContact('new_provider_phone')">
+                            <i class="fas fa-address-book"></i>
+                        </button>
+                    </div>
                 </div>
             </div>
             <div class="modal-footer border-0 p-4 pt-0">
-                <button type="button" class="btn btn-primary w-100 rounded-pill fw-bold" onclick="saveProvider()">حفظ المورد</button>
+                <button type="button" class="btn btn-primary w-100 rounded-pill fw-bold" id="btn_save_provider" onclick="saveProvider()">حفظ المورد</button>
             </div>
         </div>
     </div>
@@ -637,6 +648,73 @@ $shipments = $purchaseRepo->getTodayShipmentsByUserId($today, $user_id);
                 }
             });
     }
+
+    // Universal Focus Navigation Helper
+    function setupFocusNavigation(fieldIds, submitBtnId = null) {
+        fieldIds.forEach((id, index) => {
+            const el = document.getElementById(id);
+            if (!el) return;
+            el.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    if (index < fieldIds.length - 1) {
+                        const next = document.getElementById(fieldIds[index + 1]);
+                        if (next) next.focus();
+                    } else if (submitBtnId) {
+                        const btn = document.getElementById(submitBtnId);
+                        if (btn) btn.click();
+                    }
+                }
+            });
+        });
+    }
+
+    // Contact Picker
+    async function pickContact(fieldId) {
+        if (!('contacts' in navigator && 'ContactsManager' in window)) {
+            alert('هذه الميزة مدعومة فقط في متصفحات الجوال الحديثة (Chrome/Android).');
+            return;
+        }
+        try {
+            const contacts = await navigator.contacts.select(['tel'], { multiple: false });
+            if (contacts && contacts.length > 0 && contacts[0].tel && contacts[0].tel.length > 0) {
+                // Clean the phone number (remove spaces, dashes, etc)
+                let phone = contacts[0].tel[0].replace(/[^0-9+]/g, '');
+                document.getElementById(fieldId).value = phone;
+            }
+        } catch (e) {
+            console.log('Contact picker cancelled or failed', e);
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        setupFocusNavigation(['weight_kg', 'weight_grams', 'price_per_kilo'], 'btn-step-3-weight');
+        setupFocusNavigation(['source_units', 'price_per_unit'], 'btn-step-3-units');
+        setupFocusNavigation(['new_provider_name', 'new_provider_phone'], 'btn_save_provider');
+    });
+    // Image preview for sourcing
+    function previewImage(input) {
+        const previewBox = document.getElementById('imgPreviewBox');
+        const previewImg = document.getElementById('imgPreview');
+        const uploadIcon = document.getElementById('uploadIcon');
+        if (input.files && input.files[0]) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                previewImg.src = e.target.result;
+                previewBox.classList.remove('d-none');
+                if (uploadIcon) uploadIcon.classList.add('d-none');
+            };
+            reader.readAsDataURL(input.files[0]);
+        }
+    }
+
+    function clearImage() {
+        document.getElementById('mediaInput').value = '';
+        document.getElementById('imgPreviewBox').classList.add('d-none');
+        const uploadIcon = document.getElementById('uploadIcon');
+        if (uploadIcon) uploadIcon.classList.remove('d-none');
+    }
+
 </script>
 
 <?php include 'includes/footer.php'; ?>

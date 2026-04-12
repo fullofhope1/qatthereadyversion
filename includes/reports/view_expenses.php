@@ -32,7 +32,12 @@
             <i class="fas fa-wallet me-2 text-danger"></i>
             سجل المصاريف التشغيلية
         </h5>
-        <span class="badge bg-light text-muted fw-normal"><?= count($listExp) ?> قيد</span>
+        <div class="d-flex gap-2 align-items-center">
+            <span class="badge bg-light text-muted fw-normal me-2"><?= count($listExp) ?> قيد</span>
+            <button onclick="window.print()" class="btn btn-sm btn-dark rounded-pill no-print">
+                <i class="fas fa-print me-1"></i> طباعة التقرير
+            </button>
+        </div>
     </div>
     <div class="card-body p-0">
         <!-- Search box (#27) -->

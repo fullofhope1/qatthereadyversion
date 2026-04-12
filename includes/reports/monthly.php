@@ -47,6 +47,22 @@
             </div>
         </div>
 
+        <div class="alert alert-info shadow-sm text-center mb-5">
+            <?php
+            $netCash = $remainingCash ?? 0;
+            $utSum = (float)($salesSummary['total_unknown_transfers'] ?? 0);
+            ?>
+            <h4 class="mb-0"><i class="fas fa-coins me-2"></i> Projected Cash in Drawer (النقد المتوقع): <b><?= number_format($netCash) ?></b> YER</h4>
+            <div class="small mt-2">
+                Cash Sales (<?= number_format($cashSales) ?>)
+                + Debt Payments (<?= number_format($collectedPayments) ?>)
+                <?php if($utSum > 0): ?>+ Unknown Transfers (<?= number_format($utSum) ?>)<?php endif; ?>
+                - Expenses (<?= number_format($totalExpenses) ?>)
+                - Refunds (<?= number_format($cashRefunds) ?>)
+                - Deposits (<?= number_format($depositsYER) ?>)
+            </div>
+        </div>
+
         <!-- 2. DAY-BY-DAY MATRIX -->
         <h5 class="text-dark border-bottom pb-2 mb-3 fw-bold"><i class="fas fa-table me-2"></i> 2. Daily Performance Matrix (جدول الأداء اليومي)</h5>
 

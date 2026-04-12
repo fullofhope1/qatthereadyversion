@@ -9,14 +9,14 @@ $totalWasteUnits = array_sum(array_column($listWaste, 'quantity_units'));
         <h5 class="mb-0 fw-bold text-danger">
             <i class="fas fa-trash-alt me-2"></i> تقرير التوالف (البقايا المنتهية)
         </h5>
-        <div>
-            <span class="badge bg-danger fs-6 fw-normal me-2">
-                إجمالي الوزن التالف: <?= number_format($totalWasteWeight, 3) ?> كجم
+        <div class="d-flex gap-2 align-items-center">
+            <span class="badge bg-danger fs-6 fw-normal me-1">
+                الوزن: <?= number_format($totalWasteWeight, 3) ?> كجم
             </span>
-            <span class="badge bg-danger fs-6 fw-normal me-2">
-                إجمالي التالف بالوحدة: <?= number_format($totalWasteUnits) ?> وحدة
-            </span>
-            <span class="badge bg-light text-muted fw-normal"><?= count($listWaste) ?> عملية</span>
+            <span class="badge bg-light text-muted fw-normal me-2"><?= count($listWaste) ?> عملية</span>
+            <button onclick="window.print()" class="btn btn-sm btn-dark rounded-pill no-print">
+                <i class="fas fa-print me-1"></i> طباعة
+            </button>
         </div>
     </div>
     <div class="card-body p-0">

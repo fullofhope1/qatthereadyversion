@@ -143,6 +143,9 @@ class ReportRepository extends BaseRepository
         $depositsYER = $this->fetchColumn("SELECT SUM(amount) FROM qat_deposits $whereDep AND currency = 'YER'", $paramsDep) ?: 0;
         $cashRefunds = $this->fetchColumn("SELECT SUM(amount) FROM refunds r $whereRef AND refund_type = 'Cash'", $paramsRef) ?: 0;
         $debtRefunds = $this->fetchColumn("SELECT SUM(amount) FROM refunds r $whereRef AND refund_type = 'Debt'", $paramsRef) ?: 0;
+        
+        list($whereUT, $paramsUT) = $this->getWhereAndParams($reportType, $date, $month, $year, 'transfer_date');
+        $totalUT = $this->fetchColumn("SELECT SUM(amount) FROM unknown_transfers $whereUT", $paramsUT) ?: 0;
 
         try {
             $collectedCash = $this->fetchColumn("SELECT SUM(amount) FROM payments $wherePay AND payment_method = 'Cash'", $paramsPay) ?: 0;
@@ -169,7 +172,8 @@ class ReportRepository extends BaseRepository
             'deposits_yer' => $depositsYER,
             'cash_refunds' => $cashRefunds,
             'debt_refunds' => $debtRefunds,
-            'total_expenses' => $totalExpenses
+            'total_expenses' => $totalExpenses,
+            'total_unknown_transfers' => $totalUT
         ];
     }
 
@@ -256,5 +260,12 @@ class ReportRepository extends BaseRepository
         $electronicSales = $this->fetchColumn("SELECT SUM(price) FROM sales WHERE payment_method IN ('Kuraimi Deposit', 'Jayb Deposit', 'Internal Transfer')") ?: 0;
         $deposits = $this->fetchColumn("SELECT SUM(amount) FROM qat_deposits") ?: 0;
         return $electronicSales + $deposits;
+    }
+
+    public function getUnknownTransfersList($reportType, $date, $month, $year)
+    {
+        list($where, $params) = $this->getWhereAndParams($reportType, $date, $month, $year, 'transfer_date');
+        $sql = "SELECT * FROM unknown_transfers $where ORDER BY transfer_date DESC, id DESC";
+        return $this->fetchAll($sql, $params);
     }
 }

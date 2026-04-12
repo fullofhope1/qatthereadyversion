@@ -275,7 +275,7 @@ if (!empty($freshProducts)) {
         <div class="mb-5 animate__animated animate__zoomIn" style="animation-delay: 0.1s;">
             <h4 class="fw-bold premium-quote mt-2">
                 <i class="fas fa-quote-right position-absolute" style="color: #ffd700; right: -15px; top: -15px; font-size: 2rem; text-shadow: 0 5px 15px rgba(255,193,7,0.4);"></i>
-                لا نخاف من بورة ولا نفرح بحظى
+                لا نخاف من بورة ولا نفرح بحظا
                 <i class="fas fa-quote-left position-absolute" style="color: #ffd700; left: -15px; bottom: -15px; font-size: 2rem; text-shadow: 0 5px 15px rgba(255,193,7,0.4);"></i>
             </h4>
         </div>

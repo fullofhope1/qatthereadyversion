@@ -237,6 +237,7 @@ if (in_array($view, ['Summary', 'Printable', 'Dashboard'])) {
                             'Expenses' => ['label' => 'المصاريف', 'icon' => 'fa-wallet'],
                             'Refunds' => ['label' => 'المرتجعات', 'icon' => 'fa-undo'],
                             'Debts' => ['label' => 'الديون', 'icon' => 'fa-file-invoice-dollar'],
+                            'unknown_transfers' => ['label' => 'حوالات مجهولة', 'icon' => 'fa-question-circle'],
                             'Printable' => ['label' => 'التقرير المطبوع', 'icon' => 'fa-print'],
                             'Dashboard' => ['label' => 'تحليل الأداء', 'icon' => 'fa-tachometer-alt'],
                         ];

@@ -24,17 +24,14 @@ $cashRefunds = 0;
 $debtRefunds = 0;
 foreach ($listRefunds as $r) {
     if ($r['refund_type'] === 'Cash') $cashRefunds += $r['amount'];
-    else $debtRefunds += $r['amount'];
 }
-
-$totalInflow = $salesSummary['cash_sales'] + $collectedPayments;
+$totalUnknownTransfers = (float)($salesSummary['total_unknown_transfers'] ?? 0);
+$totalInflow = $salesSummary['cash_sales'] + $collectedPayments + $totalUnknownTransfers;
 $totalOutflow = $totalExpenses + $cashRefunds + $depositsYER;
 $remainingCash = $totalInflow - $totalOutflow;
 
 $totalDroppedKg  = ($leftoversSummary['manual_dropped_kg'] ?? 0) + ($leftoversSummary['auto_dropped_kg'] ?? 0);
 $totalMomsiKg    = ($leftoversSummary['manual_momsi_kg'] ?? 0) + ($leftoversSummary['auto_momsi_kg'] ?? 0);
-?>
-
 ?>
 
 <style>
@@ -169,6 +166,12 @@ $totalMomsiKg    = ($leftoversSummary['manual_momsi_kg'] ?? 0) + ($leftoversSumm
                         <span class="text-muted">سداد ديون قديمة:</span>
                         <span class="fw-bold text-primary">+ <?= number_format($collectedPayments) ?></span>
                     </div>
+                    <?php if ($totalUnknownTransfers > 0): ?>
+                    <div class="d-flex justify-content-between mb-3">
+                        <span class="text-muted">تحويلات مجهولة مستلمة:</span>
+                        <span class="fw-bold text-warning">+ <?= number_format($totalUnknownTransfers) ?></span>
+                    </div>
+                    <?php endif; ?>
                     <div class="bg-light p-2 rounded text-center small text-muted">
                         <i class="fas fa-info-circle me-1"></i> هذا المبلغ يمثل إجمالي الكاش الذي دخل الصندوق
                     </div>

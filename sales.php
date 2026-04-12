@@ -184,20 +184,17 @@ $jsonCustomers = json_encode($customers);
         <div id="step3" class="step-container">
             <h3>من الزبون؟</h3>
             <div class="grid-container">
-                <button type="button" class="circle-btn btn-cust" onclick="showTayyarPrompt()">
-                    طيار
+                <button type="button" class="circle-btn btn-cust" onclick="showCustList()" style="text-align:center;">
+                    عميل مستمر
                 </button>
-                <button type="button" class="circle-btn btn-cust" onclick="showCustList()">
-                    بحث
-                </button>
-                <button type="button" class="circle-btn btn-cust" style="background: #dc3545;" onclick="showAddCust()">
-                    إضافة
+                <button type="button" class="circle-btn btn-cust" style="background: #dc3545; text-align:center;" onclick="showAddCust()">
+                    عميل جديد
                 </button>
             </div>
 
             <!-- Hidden List for Existing -->
             <div id="custList" class="d-none mt-3 w-50 mx-auto">
-                <input type="text" id="cSearch" class="form-control mb-2 p-3 text-end" placeholder="...ابدأ بالكتابة" onkeyup="filterCust()">
+                <input type="text" id="cSearch" class="form-control mb-2 p-3 text-end" placeholder="...ابدأ بالكتابة" onkeyup="filterCust()" enterkeyhint="search">
                 <div class="list-group text-end" id="cListGroup" style="max-height: 200px; overflow-y:auto;">
                     <!-- JS Populated -->
                 </div>
@@ -206,16 +203,14 @@ $jsonCustomers = json_encode($customers);
             <!-- Hidden Form for New -->
             <div id="newCustForm" class="d-none mt-3 w-50 mx-auto bg-white p-3 rounded shadow text-end">
                 <h5>إضافة زبون جديد</h5>
-                <input type="text" id="new_name" class="form-control mb-2 text-end" placeholder="الاسم الكامل">
-                <input type="text" id="new_phone" class="form-control mb-2 text-end" placeholder="رقم الهاتف">
-                <button type="button" class="btn btn-success w-100" onclick="saveNewCust()">حفظ واختيار</button>
-            </div>
-
-            <!-- Hidden Form for Tayyar Name -->
-            <div id="tayyarForm" class="d-none mt-3 w-50 mx-auto bg-white p-3 rounded shadow text-end">
-                <h5>اسم الزبون (الطيار)</h5>
-                <input type="text" id="t_name" class="form-control mb-2 text-end" placeholder="الاسم الكامل">
-                <button type="button" class="btn btn-warning w-100" onclick="confirmTayyar()">تأكيد واختيار</button>
+                <input type="text" id="new_name" class="form-control mb-2 text-end" placeholder="الاسم الكامل" enterkeyhint="next">
+                <div class="input-group mb-2">
+                    <input type="tel" id="new_phone" class="form-control text-end" placeholder="رقم الهاتف" inputmode="numeric" enterkeyhint="done">
+                    <button type="button" class="btn btn-warning" onclick="pickContact('new_phone')" title="اختيار من جهات الاتصال">
+                        <i class="fas fa-address-book"></i>
+                    </button>
+                </div>
+                <button type="button" class="btn btn-success w-100" id="btn_save_new_cust" onclick="saveNewCust()">حفظ واختيار</button>
             </div>
 
             <div class="mt-4"><button type="button" class="btn btn-secondary" onclick="backStep(2)">عودة</button></div>
@@ -238,32 +233,34 @@ $jsonCustomers = json_encode($customers);
                 </button>
             </div>
 
-            <div id="manualWeight" class="d-none mt-4 w-50 mx-auto">
+            <div id="manualWeight" class="d-none mt-4 w-75 mx-auto">
                 <div class="row g-2">
                     <div class="col-6">
                         <label>جرام</label>
-                        <input type="number" id="m_grams" class="form-control p-3 text-center fs-4" placeholder="جرام" oninput="syncWeight('g')">
+                        <input type="number" id="m_grams" class="form-control p-3 text-center fs-4" placeholder="جرام" oninput="syncWeight('g')" inputmode="numeric" enterkeyhint="next">
                     </div>
                     <div class="col-6">
                         <label>كيلو</label>
-                        <input type="number" id="m_kg" class="form-control p-3 text-center fs-4" placeholder="كيلوجرام" oninput="syncWeight('k')">
+                        <input type="number" id="m_kg" class="form-control p-3 text-center fs-4" placeholder="كيلوجرام" oninput="syncWeight('k')" inputmode="numeric" enterkeyhint="done">
                     </div>
                 </div>
+                <div id="weight_error_msg" class="alert alert-danger d-none mt-2 text-center fw-bold"></div>
                 <!-- Confirmation -->
-                <button type="button" class="btn btn-primary w-100 mt-3 p-2" onclick="confirmManualWeight()">تأكيد الوزن</button>
+                <button type="button" class="btn btn-primary w-100 mt-3 p-3 fs-5" id="btn_confirm_weight" onclick="confirmManualWeight()">تأكيد الوزن ✓</button>
             </div>
 
             <div class="mt-4"><button type="button" class="btn btn-secondary" onclick="backStep(3)">عودة</button></div>
         </div>
 
+        <div id="unit_error_msg" class="alert alert-danger d-none mt-2 text-center fw-bold mx-auto" style="max-width:400px"></div>
         <!-- STEP 4U: Units (Count-based) - dynamically populated -->
         <div id="step4u" class="step-container">
             <h3>كم <span id="unitLabel">حبة</span>؟</h3>
             <p id="unitMaxLabel" class="text-muted small"></p>
             <div class="grid-container" id="unitBtnsGrid"></div>
-            <div id="manualUnits" class="d-none mt-4 w-25 mx-auto">
-                <input type="number" id="m_units_val" class="form-control p-3 text-center fs-4" placeholder="العدد" min="1">
-                <button type="button" class="btn btn-primary w-100 mt-3 p-2" onclick="confirmManualUnits()">تأكيد العدد</button>
+            <div id="manualUnits" class="d-none mt-4 w-75 mx-auto">
+                <input type="number" id="m_units_val" class="form-control p-4 text-center fw-bold" style="font-size:2rem; border-radius:12px;" placeholder="العدد" inputmode="numeric" enterkeyhint="done">
+                <button type="button" class="btn btn-primary w-100 mt-3 p-3 fs-5" id="btn_confirm_units" onclick="confirmManualUnits()">تأكيد العدد ✓</button>
             </div>
             <div class="mt-4"><button type="button" class="btn btn-secondary" onclick="backStep(3)">عودة</button></div>
         </div>
@@ -272,20 +269,19 @@ $jsonCustomers = json_encode($customers);
         <div id="step5" class="step-container">
             <h3>السعر</h3>
             <div class="grid-container">
-                <button type="button" class="circle-btn btn-price" onclick="nextStep(5, 1000)">1000</button>
-                <button type="button" class="circle-btn btn-price" onclick="nextStep(5, 2000)">2000</button>
-                <button type="button" class="circle-btn btn-price" onclick="nextStep(5, 3000)">3000</button>
-                <button type="button" class="circle-btn btn-price" onclick="nextStep(5, 5000)">5000</button>
-                <button type="button" class="circle-btn btn-price" onclick="nextStep(5, 10000)">10000</button>
-
+                <button type="button" class="circle-btn btn-price" onclick="nextStep(5, 30000)">30,000</button>
+                <button type="button" class="circle-btn btn-price" onclick="nextStep(5, 35000)">35,000</button>
+                <button type="button" class="circle-btn btn-price" onclick="nextStep(5, 40000)">40,000</button>
+                <button type="button" class="circle-btn btn-price" onclick="nextStep(5, 45000)">45,000</button>
+                <button type="button" class="circle-btn btn-price" onclick="nextStep(5, 100000)">100,000</button>
                 <button type="button" class="circle-btn bg-dark text-white" onclick="document.getElementById('manualPrice').classList.remove('d-none')">
                     يدوي
                 </button>
             </div>
-            <div id="manualPrice" class="d-none mt-3 w-25 mx-auto">
-                <input type="number" id="m_price_val" class="form-control p-3 text-center fs-4" placeholder="ريال">
-                <!-- Confirm button like weight (#11) -->
-                <button type="button" class="btn btn-primary w-100 mt-3 p-2" onclick="confirmManualPrice()">تأكيد السعر</button>
+            <div id="manualPrice" class="d-none mt-3 w-75 mx-auto">
+                <input type="number" id="m_price_val" class="form-control p-4 text-center fw-bold" style="font-size:2rem; letter-spacing:2px; border-radius:16px; border:3px solid #fd7e14;" placeholder="0" inputmode="numeric" enterkeyhint="done">
+                <div id="price_preview" class="text-center mt-2 fw-bold text-primary fs-5"></div>
+                <button type="button" class="btn btn-primary w-100 mt-3 p-3 fs-5" id="btn_confirm_price" onclick="confirmManualPrice()">تأكيد السعر ✓</button>
             </div>
             <div class="mt-4"><button type="button" class="btn btn-secondary" onclick="backStep(4)">عودة</button></div>
         </div>
@@ -304,40 +300,41 @@ $jsonCustomers = json_encode($customers);
         <!-- STEP 6.5: Transfer Details -->
         <div id="step_transfer" class="step-container">
             <h3>تفاصيل التحويل</h3>
-            <div class="w-50 mx-auto text-end">
+            <div class="w-75 mx-auto text-end">
                 <div class="mb-3">
-                    <label class="form-label">المستلم (الذي استلم)</label>
-                    <select id="t_receiver_val" class="form-select text-end p-3">
-                        <option value="ماجد القادري">ماجد القادري</option>
+                    <label class="form-label fw-bold">المستلم (الذي استلم)</label>
+                    <select id="t_receiver_val" class="form-select text-end p-3" onchange="toggleOtherReceiver(this)">
+                        <option value="محمد القادري">محمد القادري</option>
                         <option value="ابن اخيه">ابن اخيه</option>
-                    </select>
-                </div>
-                <div class="mb-3">
-                    <label class="form-label">الشركة المستخدمة للتحويل</label>
-                    <select id="t_company_val" class="form-select text-end p-3" onchange="toggleOtherCompany(this)">
-                        <option value="الكريمي">الكريمي</option>
-                        <option value="كاك بنك">كاك بنك</option>
-                        <option value="بنك التسليف">بنك التسليف</option>
-                        <option value="مدى">مدى</option>
-                        <option value="بنك اليمن الدولي">بنك اليمن الدولي</option>
-                        <option value="بنك اليمن والكويت">بنك اليمن والكويت</option>
-                        <option value="يمن موبايل">يمن موبايل</option>
-                        <option value="سبأفون">سبأفون</option>
-                        <option value="يو">يو</option>
                         <option value="أخرى">أخرى</option>
                     </select>
-                    <!-- Show free-text input when أخرى selected (#14) -->
-                    <input type="text" id="t_company_other" class="form-control mt-2 d-none" placeholder="اكتب اسم الشركة">
+                    <input type="text" id="t_receiver_other" class="form-control mt-2 d-none" placeholder="اكتب اسم المستلم" enterkeyhint="next">
                 </div>
                 <div class="mb-3">
-                    <label class="form-label">اسم المرسل (الذي حول)</label>
-                    <input type="text" id="t_sender_val" class="form-control text-end p-3">
+                    <label class="form-label fw-bold">الشركة المستخدمة للتحويل</label>
+                    <select id="t_company_val" class="form-select text-end p-3" onchange="toggleOtherCompany(this)">
+                        <option value="جيب">جيب</option>
+                        <option value="جوالي">جوالي</option>
+                        <option value="الكريمي">الكريمي</option>
+                        <option value="ون كاش">ون كاش</option>
+                        <option value="نجم">نجم</option>
+                        <option value="ويسترن يونيون">ويسترن يونيون</option>
+                        <option value="موني جرام">موني جرام</option>
+                        <option value="شرهان">شرهان</option>
+                        <option value="الروضة">الروضة</option>
+                        <option value="أخرى">أخرى</option>
+                    </select>
+                    <input type="text" id="t_company_other" class="form-control mt-2 d-none" placeholder="اكتب اسم الشركة" enterkeyhint="next">
                 </div>
                 <div class="mb-3">
-                    <label class="form-label">رقم الحوالة / السند <span class="text-danger">*</span></label>
-                    <input type="number" id="t_num_val" class="form-control text-end p-3" required placeholder="رقم الحوالة إلزامي">
+                    <label class="form-label fw-bold">اسم المرسل (الذي حول)</label>
+                    <input type="text" id="t_sender_val" class="form-control text-end p-3" enterkeyhint="next">
                 </div>
-                <button type="button" class="btn btn-success w-100" onclick="finishTransfer()">حفظ التحويل</button>
+                <div class="mb-3">
+                    <label class="form-label fw-bold">رقم الحوالة / السند <span class="text-danger">*</span></label>
+                    <input type="number" id="t_num_val" class="form-control text-end p-3" required placeholder="رقم الحوالة إلزامي" inputmode="numeric" enterkeyhint="done">
+                </div>
+                <button type="button" class="btn btn-success w-100 p-3 fs-5" onclick="finishTransfer()">حفظ التحويل ✓</button>
             </div>
             <div class="mt-4"><button type="button" class="btn btn-secondary" onclick="backStep(6)">عودة</button></div>
         </div>
@@ -438,20 +435,30 @@ $jsonCustomers = json_encode($customers);
         goTo('_transfer');
     }
 
+    function toggleOtherReceiver(sel) {
+        const otherInput = document.getElementById('t_receiver_other');
+        if (otherInput) {
+            otherInput.classList.toggle('d-none', sel.value !== 'أخرى');
+            if (sel.value !== 'أخرى') otherInput.value = '';
+        }
+    }
+
     function finishTransfer() {
+        let receiver = document.getElementById('t_receiver_val').value;
+        if (receiver === 'أخرى') {
+            const otherRec = document.getElementById('t_receiver_other');
+            receiver = otherRec ? otherRec.value.trim() : '';
+            if (!receiver) return alert('يرجى كتابة اسم المستلم');
+        }
         const sender = document.getElementById('t_sender_val').value;
-        const receiver = document.getElementById('t_receiver_val').value;
         const num = document.getElementById('t_num_val').value;
-        // #14: If 'أخرى' selected, use free-text input
         let company = document.getElementById('t_company_val').value;
         if (company === 'أخرى') {
             const otherInput = document.getElementById('t_company_other');
             company = otherInput ? otherInput.value.trim() : '';
             if (!company) return alert('يرجى كتابة اسم الشركة');
         }
-
         if (!sender) return alert('اسم المرسل مطلوب');
-        // #15: Transfer number is required
         if (!num) return alert('رقم الحوالة مطلوب قبل القبول');
 
         document.getElementById('i_tsender').value = sender;
@@ -566,39 +573,181 @@ $jsonCustomers = json_encode($customers);
     }
 
     function confirmManualWeight() {
-        const grams = document.getElementById('m_grams').value;
-        if (grams > 0) {
-            nextStep(4, grams);
-        } else {
+        const grams = parseFloat(document.getElementById('m_grams').value);
+        if (!grams || grams <= 0) {
             alert('الرجاء إدخال الوزن');
+            return;
+        }
+        // Inventory check BEFORE going to step 5
+        const purchaseId = document.getElementById('i_pid').value;
+        const errBox = document.getElementById('weight_error_msg');
+        errBox.classList.add('d-none');
+
+        if (purchaseId) {
+            // Check available stock via AJAX
+            fetch('requests/check_stock.php?purchase_id=' + purchaseId + '&grams=' + grams)
+                .then(r => r.json())
+                .then(data => {
+                    if (!data.ok) {
+                        errBox.innerHTML = '⚠️ الكمية غير متاحة! المتاح: <b>' + data.available_kg + ' كجم</b> — طلبت: <b>' + (grams / 1000).toFixed(3) + ' كجم</b>';
+                        errBox.classList.remove('d-none');
+                        errBox.scrollIntoView({ behavior: 'smooth' });
+                    } else {
+                        // Clear check with visual confirmation
+                        if (confirm(`تأكيد الوزن: ${(grams / 1000).toFixed(3)} كجم؟`)) {
+                            errBox.classList.add('d-none');
+                            nextStep(4, grams);
+                        }
+                    }
+                })
+                .catch(() => {
+                    if (confirm(`تأكيد الوزن: ${(grams / 1000).toFixed(3)} كجم؟`)) {
+                        nextStep(4, grams);
+                    }
+                });
+        } else {
+            nextStep(4, grams);
         }
     }
 
     function confirmManualUnits() {
-        const units = document.getElementById('m_units_val').value;
-        if (units > 0) {
-            nextStep(4.5, units);
-        } else {
+        const units = parseInt(document.getElementById('m_units_val').value);
+        if (!units || units <= 0) {
             alert('الرجاء إدخال العدد');
+            return;
         }
-    }
+        const purchaseId = document.getElementById('i_pid').value;
+        const unitType = document.getElementById('i_utype').value;
+        const errBox = document.getElementById('unit_error_msg');
+        errBox.classList.add('d-none');
 
-    // Confirm manual price (#11)
-    function confirmManualPrice() {
-        const price = document.getElementById('m_price_val').value;
-        if (price > 0) {
-            nextStep(5, price);
+        if (purchaseId) {
+            fetch('requests/check_stock.php?purchase_id=' + purchaseId + '&units=' + units + '&unit_type=' + encodeURIComponent(unitType))
+                .then(r => r.json())
+                .then(data => {
+                    if (!data.ok) {
+                        errBox.innerHTML = '⚠️ الكمية غير متاحة! المتاح: <b>' + data.available_units + ' ' + unitType + '</b> — طلبت: <b>' + units + '</b>';
+                        errBox.classList.remove('d-none');
+                        document.getElementById('step4u').appendChild(errBox);
+                        errBox.scrollIntoView({behavior:'smooth'});
+                    } else {
+                        errBox.classList.add('d-none');
+                        nextStep(4.5, units);
+                    }
+                })
+                .catch(() => nextStep(4.5, units));
         } else {
-            alert('الرجاء إدخال السعر');
+            nextStep(4.5, units);
         }
     }
 
-    // Toggle other company input (#14)
+    // Confirm manual price
+    function confirmManualPrice() {
+        const price = parseFloat(document.getElementById('m_price_val').value);
+        if (!price || price <= 0) {
+            alert('الرجاء إدخال السعر');
+            return;
+        }
+        nextStep(5, price);
+    }
+
+    // Universal Focus Navigation Helper
+    function setupFocusNavigation(fieldIds, submitBtnId = null) {
+        fieldIds.forEach((id, index) => {
+            const el = document.getElementById(id);
+            if (!el) return;
+            el.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    if (index < fieldIds.length - 1) {
+                        const next = document.getElementById(fieldIds[index + 1]);
+                        if (next) next.focus();
+                    } else if (submitBtnId) {
+                        const btn = document.getElementById(submitBtnId);
+                        if (btn) btn.click();
+                    }
+                }
+            });
+        });
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        // Setup focus logic for various forms
+        setupFocusNavigation(['new_name', 'new_phone'], 'btn_save_new_cust');
+        setupFocusNavigation(['m_grams', 'm_kg'], 'btn_confirm_weight');
+        setupFocusNavigation(['m_units_val'], 'btn_confirm_units');
+        setupFocusNavigation(['m_price_val'], 'btn_confirm_price');
+        setupFocusNavigation(['t_sender', 't_num'], 'btn_finish_transfer');
+    });
+
+    // Contact Picker
+    async function pickContact(fieldId) {
+        if (!('contacts' in navigator && 'ContactsManager' in window)) {
+            alert('هذه الميزة مدعومة فقط في متصفحات الجوال الحديثة (Chrome/Android).');
+            return;
+        }
+        try {
+            const contacts = await navigator.contacts.select(['tel'], { multiple: false });
+            if (contacts && contacts.length > 0 && contacts[0].tel && contacts[0].tel.length > 0) {
+                // Clean the phone number (remove spaces, dashes, etc)
+                let phone = contacts[0].tel[0].replace(/[^0-9+]/g, '');
+                document.getElementById(fieldId).value = phone;
+            }
+        } catch (e) {
+            console.log('Contact picker cancelled or failed', e);
+        }
+    }
+
+    // Customer UI Helpers
+    function showAddCust() {
+        document.getElementById('custList').classList.add('d-none');
+        document.getElementById('newCustForm').classList.remove('d-none');
+        const ni = document.getElementById('new_name');
+        if(ni) ni.focus();
+    }
+    
+    function showCustList() {
+        document.getElementById('newCustForm').classList.add('d-none');
+        document.getElementById('custList').classList.remove('d-none');
+        const cs = document.getElementById('cSearch');
+        if(cs) cs.focus();
+    }
+
+    // Format price as user types
+    document.addEventListener('DOMContentLoaded', function() {
+        const priceInput = document.getElementById('m_price_val');
+        const pricePreview = document.getElementById('price_preview');
+        if (priceInput && pricePreview) {
+            priceInput.addEventListener('input', function() {
+                const val = parseFloat(this.value);
+                pricePreview.textContent = val > 0 ? val.toLocaleString('ar-YE') + ' ريال' : '';
+            });
+        }
+    });
+
+    // Toggle other company input
     function toggleOtherCompany(sel) {
         const otherInput = document.getElementById('t_company_other');
         if (otherInput) {
             otherInput.classList.toggle('d-none', sel.value !== 'أخرى');
             if (sel.value !== 'أخرى') otherInput.value = '';
+        }
+    }
+
+    // Contact Picker API
+    async function pickContact(fieldId) {
+        if (!('contacts' in navigator && 'ContactsManager' in window)) {
+            alert('هذه الميزة غير مدعومة على هذا الجهاز.');
+            return;
+        }
+        try {
+            const contacts = await navigator.contacts.select(['tel'], { multiple: false });
+            if (contacts && contacts.length > 0 && contacts[0].tel && contacts[0].tel.length > 0) {
+                let phone = contacts[0].tel[0].replace(/[^0-9]/g, '');
+                document.getElementById(fieldId).value = phone;
+            }
+        } catch (e) {
+            console.log('Contact picker cancelled or failed', e);
         }
     }
 
@@ -665,7 +814,6 @@ $jsonCustomers = json_encode($customers);
         if (!phone) return alert("رقم الهاتف مطلوب (Phone is required)");
         if (!/^\d{7,15}$/.test(phone)) return alert("رقم الهاتف غير صحيح - يجب أن يكون أرقاماً فقط (7-15 رقم)");
 
-        // Simple AJAX to add customer
         const formData = new FormData();
         formData.append('name', name);
         formData.append('phone', phone);
@@ -677,16 +825,8 @@ $jsonCustomers = json_encode($customers);
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    // Add to local list and select
-                    allCustomers.push({
-                        id: data.id,
-                        name: name,
-                        phone: phone
-                    });
-                    nextStep(3, {
-                        id: data.id,
-                        name: name
-                    });
+                    allCustomers.push({ id: data.id, name: name, phone: phone });
+                    nextStep(3, { id: data.id, name: name });
                 } else {
                     alert("خطأ: " + (data.error || "فشل في إضافة الزبون"));
                 }

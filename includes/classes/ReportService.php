@@ -30,6 +30,8 @@ class ReportService extends BaseService
                 return $this->reportRepo->getExpensesList($reportType, $date, $month, $year, $userId);
             case 'Waste':
                 return $this->reportRepo->getWasteList($reportType, $date, $month, $year);
+            case 'unknown_transfers':
+                return $this->reportRepo->getUnknownTransfersList($reportType, $date, $month, $year);
             case 'Printable':
                 return [
                     'sales' => $this->reportRepo->getSalesList($reportType, $date, $month, $year),
@@ -45,7 +47,7 @@ class ReportService extends BaseService
     public function getCashSummary($reportType, $date, $month, $year, $userId = null)
     {
         $summary = $this->reportRepo->getCashSummary($reportType, $date, $month, $year, $userId);
-        $summary['remaining_cash'] = ($summary['cash_sales'] + $summary['collected_payments']) - ($summary['total_expenses'] + $summary['cash_refunds'] + $summary['deposits_yer']);
+        $summary['remaining_cash'] = ($summary['cash_sales'] + $summary['collected_payments'] + $summary['total_unknown_transfers']) - ($summary['total_expenses'] + $summary['cash_refunds'] + $summary['deposits_yer']);
         return $summary;
     }
 

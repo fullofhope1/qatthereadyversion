@@ -32,6 +32,14 @@ $yesterday = date('Y-m-d', strtotime('-1 day'));
     .overdue-24h {
         background: #f8d7da !important;
     }
+
+    /* Debt type row colors */
+    .debt-row-daily   { background: rgba(220, 53,  69,  0.08) !important; border-right: 4px solid #dc3545; }
+    .debt-row-monthly { background: rgba(13,  110, 253, 0.08) !important; border-right: 4px solid #0d6efd; }
+    .debt-row-yearly  { background: rgba(25,  135, 84,  0.08) !important; border-right: 4px solid #198754; }
+    .debt-row-daily.overdue-24h   { background: rgba(220, 53, 69, 0.2) !important; }
+    .debt-row-monthly.overdue-24h { background: rgba(13, 110, 253, 0.15) !important; }
+    .debt-row-yearly.overdue-24h  { background: rgba(25, 135, 84, 0.15) !important; }
 </style>
 
 <div class="row mb-4">
@@ -114,7 +122,18 @@ $yesterday = date('Y-m-d', strtotime('-1 day'));
                                 if (!empty($d['earliest_due']) && $d['earliest_due'] <= $yesterday) {
                                     $isOverdue24h = true;
                                 }
-                                $rowClass = $isOverdue24h ? 'overdue-24h' : '';
+                                // Row color by debt type
+                                $debtTypeClass = '';
+                                if (!empty($d['debt_type'])) {
+                                    if ($d['debt_type'] === 'Daily')   $debtTypeClass = 'debt-row-daily';
+                                    if ($d['debt_type'] === 'Monthly') $debtTypeClass = 'debt-row-monthly';
+                                    if ($d['debt_type'] === 'Yearly')  $debtTypeClass = 'debt-row-yearly';
+                                } elseif ($type !== 'All') {
+                                    if ($type === 'Daily')   $debtTypeClass = 'debt-row-daily';
+                                    if ($type === 'Monthly') $debtTypeClass = 'debt-row-monthly';
+                                    if ($type === 'Yearly')  $debtTypeClass = 'debt-row-yearly';
+                                }
+                                $rowClass = $debtTypeClass . ($isOverdue24h ? ' overdue-24h' : '');
                             ?>
                                 <tr class="<?= $rowClass ?>">
                                     <td>

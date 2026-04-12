@@ -69,12 +69,23 @@ class CommunicationRepository extends BaseRepository
 
     public function getDebtorsWithActivity()
     {
+        // Get debtors and their LATEST SALE details (subquery for the specific sale record)
         $sql = "SELECT c.*, 
-                   (SELECT MAX(sale_date) FROM sales WHERE customer_id = c.id) as last_sale,
-                   (SELECT MAX(payment_date) FROM payments WHERE customer_id = c.id) as last_pay
+                   s.price as last_sale_amount,
+                   s.sale_date as last_sale_date,
+                   t.name as last_qat_type,
+                   s.weight_grams as last_weight,
+                   s.quantity_units as last_units,
+                   s.unit_type as last_unit_type
                 FROM customers c 
-                WHERE total_debt > 0 
-                ORDER BY name ASC";
+                LEFT JOIN sales s ON s.id = (
+                    SELECT id FROM sales 
+                    WHERE customer_id = c.id 
+                    ORDER BY sale_date DESC, id DESC LIMIT 1
+                )
+                LEFT JOIN qat_types t ON s.qat_type_id = t.id
+                WHERE c.total_debt > 0 
+                ORDER BY c.name ASC";
         return $this->fetchAll($sql);
     }
 

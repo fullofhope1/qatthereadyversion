@@ -125,6 +125,44 @@ if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
             font-weight: 900;
         }
 
+        /* Mobile Fixes for Profile Dropdown */
+        @media (max-width: 768px) {
+            .dropdown-menu-end {
+                left: 50% !important;
+                right: auto !important;
+                transform: translateX(-50%) !important;
+                min-width: 250px !important;
+            }
+        }
+
+        /* Print logic */
+        @media print {
+            body { background: white !important; color: black !important; }
+            .no-print, .btn, .navbar, .nav, .breadcrumb, .alert, .no-print * { 
+                display: none !important; 
+                height: 0 !important;
+                margin: 0 !important;
+                padding: 0 !important;
+            }
+            .card { border: none !important; box-shadow: none !important; background: transparent !important; }
+            .container-fluid, .container { width: 100% !important; padding: 0 !important; margin: 0 !important; max-width: 100% !important; }
+            
+            .print-header { display: block !important; text-align: center; margin-bottom: 30px; border-bottom: 2px solid #000; padding-bottom: 10px; }
+            .print-header h1 { font-size: 24pt; font-weight: 900; margin-bottom: 5px; }
+            .print-header p { font-size: 10pt; color: #555; }
+            
+            table { width: 100% !important; border-collapse: collapse !important; font-size: 10pt !important; }
+            th, td { border: 1px solid #ddd !important; padding: 8px !important; }
+            th { background-color: #f8f9fa !important; -webkit-print-color-adjust: exact; }
+            .text-danger { color: #dc3545 !important; }
+            .text-success { color: #198754 !important; }
+            .badge { border: 1px solid #ccc !important; color: black !important; background: transparent !important; }
+            
+            @page { size: A4; margin: 1.5cm; }
+        }
+        
+        .print-header { display: none; }
+
         .premium-card {
             border: none;
             border-radius: 15px;
@@ -276,8 +314,8 @@ if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
                                 <i class="fas fa-user-circle me-2 fs-5"></i>
                                 <span class="d-none d-md-inline"><?= htmlspecialchars($_SESSION['username']) ?></span>
                             </button>
-                            <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0 mt-2">
-                                <li class="px-3 py-2 border-bottom mb-2 d-md-none">
+                            <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0 mt-2" style="min-width:200px; right:0; left:auto;">
+                                <li class="px-3 py-2 border-bottom mb-2">
                                     <span class="text-muted small">مرحباً، </span><br>
                                     <strong><?= htmlspecialchars($_SESSION['username']) ?></strong>
                                 </li>

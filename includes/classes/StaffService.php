@@ -15,9 +15,9 @@ class StaffService extends BaseService
         return $this->staffRepo->create($data);
     }
 
-    public function getStaffList($userId)
+    public function getStaffList($userId, $role = null, $subRole = null)
     {
-        return $this->staffRepo->getWithCurrentWithdrawals($userId);
+        return $this->staffRepo->getWithCurrentWithdrawals($userId, $role, $subRole);
     }
 
     public function updateStaff($id, array $data)

@@ -44,7 +44,12 @@
                 </span>
             <?php endif; ?>
         </h5>
-        <span class="badge bg-light text-muted fw-normal"><?= count($listSales) ?> عملية</span>
+        <div class="d-flex gap-2 align-items-center">
+            <span class="badge bg-light text-muted fw-normal"><?= count($listSales) ?> عملية</span>
+            <button onclick="window.print()" class="btn btn-sm btn-dark rounded-pill no-print">
+                <i class="fas fa-print me-1"></i> طباعة
+            </button>
+        </div>
     </div>
     <div class="card-body p-0">
         <!-- Search box (#27) -->

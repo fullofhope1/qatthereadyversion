@@ -75,22 +75,18 @@
         <!-- 1.5 CASH FLOW ADJUSTMENT -->
         <div class="alert alert-info shadow-sm text-center mb-5">
             <?php
-            // Calculate Cash Sales
-            $cashSales = 0;
-            foreach ($listSales as $s) {
-                if ($s['payment_method'] == 'Cash') $cashSales += $s['price'];
-            }
-            // Also add payments received today from DEBTS (if we tracked that separately? we don't have a specific table for debt payments yet except updating total_debt? 
-            // Wait, 'pay_sale.php' updates 'is_paid' and 'paid_amount' in sales. But that might be for past sales.
-            // Ideally we need a 'payments' table. For now, let's assume Cash Sales - Cash Refunds = Cash In Drawer from Today's biz.
-
-            $netCash = $cashSales - $totalExpenses - $totalCashRefunds;
+            // Use centralized cash summary if available
+            $netCash = $remainingCash ?? 0;
+            $utSum = (float)($salesSummary['total_unknown_transfers'] ?? 0);
             ?>
             <h4 class="mb-0"><i class="fas fa-coins me-2"></i> Cash in Drawer (النقد المتوقع): <b><?= number_format($netCash) ?></b> YER</h4>
             <div class="small mt-2">
                 Cash Sales (<?= number_format($cashSales) ?>)
+                + Debt Payments (<?= number_format($collectedPayments) ?>)
+                <?php if($utSum > 0): ?>+ Unknown Transfers (<?= number_format($utSum) ?>)<?php endif; ?>
                 - Expenses (<?= number_format($totalExpenses) ?>)
-                - Cash Refunds (<?= number_format($totalCashRefunds) ?>)
+                - Cash Refunds (<?= number_format($cashRefunds) ?>)
+                <?php if(($depositsYER ?? 0) > 0): ?>- Deposits (<?= number_format($depositsYER) ?>)<?php endif; ?>
             </div>
         </div>
 

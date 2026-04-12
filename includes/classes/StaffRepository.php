@@ -16,11 +16,20 @@ class StaffRepository extends BaseRepository
         return $this->fetchOne("SELECT * FROM staff WHERE id = ?", [$id]);
     }
 
-    public function getWithCurrentWithdrawals($userId)
+    public function getWithCurrentWithdrawals($userId, $role = null, $subRole = null)
     {
-        $sql = "SELECT s.*, 
-                (SELECT SUM(amount) FROM expenses WHERE staff_id = s.id AND category = 'Staff') as current_withdrawals 
-                FROM staff s 
+        // super_admin sees ALL staff
+        if ($role === 'super_admin') {
+            $sql = "SELECT s.*,
+                    (SELECT SUM(amount) FROM expenses WHERE staff_id = s.id AND category = 'Staff') as current_withdrawals
+                    FROM staff s
+                    ORDER BY s.name ASC";
+            return $this->fetchAll($sql);
+        }
+
+        $sql = "SELECT s.*,
+                (SELECT SUM(amount) FROM expenses WHERE staff_id = s.id AND category = 'Staff') as current_withdrawals
+                FROM staff s
                 WHERE s.created_by = ?
                 ORDER BY s.name ASC";
         return $this->fetchAll($sql, [$userId]);

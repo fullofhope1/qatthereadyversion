@@ -10,26 +10,56 @@ class CommunicationService extends BaseService
         $this->commRepo = $commRepo;
     }
 
+    protected function getArabicDay($date)
+    {
+        $days = [
+            'Sunday' => 'الأحد',
+            'Monday' => 'الاثنين',
+            'Tuesday' => 'الثلاثاء',
+            'Wednesday' => 'الأربعاء',
+            'Thursday' => 'الخميس',
+            'Friday' => 'الجمعة',
+            'Saturday' => 'السبت'
+        ];
+        return $days[date('l', strtotime($date))] ?? '';
+    }
+
     public function getWhatsAppStatementsData()
     {
         $customers = $this->commRepo->getDebtorsWithActivity();
-        $todayDate = date('Y-m-d');
+        $dateStr = date('j / n / Y');
+        $dayName = $this->getArabicDay(date('Y-m-d'));
 
         foreach ($customers as &$c) {
-            $lastTrans = array_reverse($this->commRepo->getLastTransactions($c['id']));
-
-            $transLine = "";
-            foreach ($lastTrans as $tr) {
-                $date = date('m-d', strtotime($tr['t_date']));
-                $amt = number_format(abs($tr['amount']));
-                $sign = ($tr['amount'] > 0 ? '+' : '-');
-                $transLine .= "📅 {$date}: {$tr['t_type']} ({$sign}{$amt})\n";
+            // Header
+            $msg = "إشعار من القادري لأجود انواع القات : {$dayName} {$dateStr}م\n";
+            
+            // Latest Transaction Details
+            if ($c['last_sale_amount']) {
+                $lastAmt = number_format($c['last_sale_amount']);
+                $msg .= "عليكم  {$lastAmt} محلي\n";
+                
+                $qatType = $c['last_qat_type'] ?? 'قات';
+                $weightInfo = "";
+                if ($c['last_unit_type'] === 'weight') {
+                    $weightInfo = ($c['last_weight'] < 1000) ? $c['last_weight'] . " جم" : ($c['last_weight']/1000) . " كجم";
+                } else {
+                    $weightInfo = $c['last_units'] . " حبة/ربطة";
+                }
+                $msg .= "{$qatType} / {$weightInfo} ؛\n";
+            } else {
+                $msg .= "لا يوجد مبيعات مسجلة مؤخراً\n";
             }
 
-            $msg = "مرحباً *{NAME}*، 👋\n\nنود إحاطتكم بتفاصيل مديونيتكم لدى *القادري و ماجد* بتاريخ {$todayDate}:\n\n*آخر الحركات:*\n" . ($transLine ?: "لا يوجد حركات مؤخراً\n") . "\n💰 *دينك الإجمالي الحالي:* {AMOUNT} ريال يمني.\n\nيرجى التكرم بالسداد في أقرب وقت لضمان استمرارية التعامل.\n\nشكراً لتعاملكم معنا.\n*القادري و ماجد*";
+            // Total Debt
+            $totalDebt = number_format($c['total_debt']);
+            $msg .= "الإجمالي - عليكم  {$totalDebt} محلي\n\n";
 
-            $msg = str_replace('{NAME}', $c['name'], $msg);
-            $msg = str_replace('{AMOUNT}', number_format($c['total_debt']), $msg);
+            // Bank Accounts
+            $msg .= "أرقام حساباتنا :\n";
+            $msg .= "جيب   ⬅️ 774456261\n";
+            $msg .= "جوالي  ⬅️ 774456261\n";
+            $msg .= "كريمي  ⬅️ 121940835";
 
             $c['encoded_msg'] = rawurlencode($msg);
             $c['formatted_phone'] = $this->formatPhone($c['phone']);
