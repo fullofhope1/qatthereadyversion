@@ -1,19 +1,21 @@
 // public/js/site-tour.js
 (function() {
     document.addEventListener("DOMContentLoaded", function () {
-        console.log("Site Tour: Initializing...");
-        
         const helpTrigger = document.getElementById("help_trigger");
-        if (!helpTrigger) {
-            console.log("Site Tour: No help trigger found.");
-            return;
-        }
+        if (!helpTrigger) return;
 
-        // Initialize Driver.js 1.0+
+        // Initialize Driver.js 1.0+ with Fallback
         let driverObj;
         try {
-            const driverLib = window.driver.js.driver;
-            if (!driverLib) throw new Error("Driver.js library not loaded correctly.");
+            // Try different possible paths for the IIFE build
+            const driverLib = (window.driver && window.driver.js && window.driver.js.driver) 
+                           || (window.driver && window.driver.driver)
+                           || window.driver;
+
+            if (typeof driverLib !== 'function') {
+                 console.error("Driver.js: Not a function", driverLib);
+                 return;
+            }
             
             driverObj = driverLib({
                 showProgress: true,
@@ -67,6 +69,7 @@
 
         helpTrigger.addEventListener("click", function (e) {
             e.preventDefault();
+            // Diagnostic Alert
             console.log("Site Tour: Help clicked.");
             
             const config = window.siteConfig;
