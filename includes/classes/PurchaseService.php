@@ -119,4 +119,9 @@ class PurchaseService extends BaseService
     {
         return $this->purchaseRepo->getTodayReceived($date);
     }
+
+    public function applyDiscount($id, $amount)
+    {
+        return $this->purchaseRepo->applyDiscount($id, $amount);
+    }
 }

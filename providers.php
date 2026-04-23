@@ -8,6 +8,15 @@ $providerRepo = new ProviderRepository($pdo);
 $providerService = new ProviderService($providerRepo);
 $providers = $providerService->listProviders($_SESSION['user_id']);
 ?>
+<style>
+    @keyframes highlightRow {
+        0% { background-color: #fff3cd; }
+        100% { background-color: transparent; }
+    }
+    .new-row-highlight {
+        animation: highlightRow 3s ease-out;
+    }
+</style>
 
 <div class="row mb-4 animate__animated animate__fadeIn">
     <div class="col-12">
@@ -163,9 +172,40 @@ $providers = $providerService->listProviders($_SESSION['user_id']);
             })
             .then(r => r.json())
             .then(data => {
-                if (data.success) location.reload();
-                else alert('خطأ: ' + data.message);
-            });
+                if (data.success) {
+                    const tbody = document.getElementById('providerTableBody');
+                    if (tbody.querySelector('.py-5')) tbody.innerHTML = '';
+
+                    const tr = document.createElement('tr');
+                    tr.className = 'new-row-highlight';
+                    tr.innerHTML = `
+                        <td class="px-4 py-3 fw-bold text-dark">${name}</td>
+                        <td class="px-4 py-3 text-secondary">${phone}</td>
+                        <td class="px-4 py-3 text-center">
+                            <div class="btn-group shadow-sm rounded-pill overflow-hidden">
+                                <button class="btn btn-sm btn-outline-warning" onclick='editProvider(${JSON.stringify(data.provider)})' title="تعديل">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="btn btn-sm btn-outline-danger" onclick="deleteProvider(${data.provider.id})" title="حذف">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    `;
+                    tbody.prepend(tr);
+
+                    const modalEl = document.getElementById('addProviderModal');
+                    const modal = bootstrap.Modal.getInstance(modalEl);
+                    if (modal) modal.hide();
+                    
+                    document.getElementById('addProviderForm').reset();
+                    document.getElementById('providerSearch').value = '';
+                    filterProviders();
+                } else {
+                    alert('خطأ: ' + data.message);
+                }
+            })
+            .catch(err => alert('حدث خطأ في الاتصال: ' + err.message));
     };
 
     function editProvider(p) {

@@ -19,12 +19,14 @@ function getProducts($pdo, $status, $date)
             qt.name as type_name, 
             qt.description as type_desc, 
             COALESCE(MAX(p.media_path), qt.media_path) as display_media,
+            p.unit_type,
             SUM(p.quantity_kg) as total_kg,
+            SUM(p.received_units) as total_units,
             MAX(p.received_at) as last_received
         FROM purchases p
         JOIN qat_types qt ON p.qat_type_id = qt.id
         WHERE p.purchase_date = ? AND p.status = ? AND p.is_received = 1 AND qt.is_deleted = 0
-        GROUP BY qt.id
+        GROUP BY qt.id, p.unit_type
         ORDER BY last_received DESC
     ");
     $stmt->execute([$date, $status]);
@@ -483,12 +485,25 @@ if (!empty($freshProducts)) {
                                         <h5 class="fw-bold text-dark"><?= htmlspecialchars($p['type_name']) ?></h5>
                                         <p class="small text-secondary mb-2"><?= htmlspecialchars($p['type_desc'] ?: 'قات طازج ممتاز قطاف اليوم.') ?></p>
                                         <div class="mb-3">
-                                            <span class="badge bg-success text-white rounded-pill px-3 py-2">
-                                                <?= number_format($p['total_kg'], 2) ?> كجم
-                                            </span>
+                                            <?php if (($p['unit_type'] ?? 'weight') === 'weight'): ?>
+                                                <span class="badge bg-success text-white rounded-pill px-3 py-2">
+                                                    <?= number_format($p['total_kg'], 2) ?> كجم
+                                                </span>
+                                            <?php else: ?>
+                                                <span class="badge bg-success text-white rounded-pill px-3 py-2">
+                                                    <?= number_format($p['total_units']) ?> <?= htmlspecialchars($p['unit_type'] ?: 'حبة') ?>
+                                                </span>
+                                            <?php endif; ?>
                                         </div>
-                                        <div class="text-muted x-small">
+                                        <div class="text-muted x-small mb-3">
                                             <i class="fas fa-clock me-1"></i> وصل: <?= date('h:i A', strtotime($p['last_received'])) ?>
+                                        </div>
+                                        <div class="mt-auto">
+                                            <a href="https://wa.me/967774456261?text=<?= urlencode('أريد استفسار عن قات ' . $p['type_name']) ?>" 
+                                               target="_blank" 
+                                               class="btn btn-success rounded-pill w-100 fw-bold shadow-sm py-2">
+                                                <i class="fab fa-whatsapp me-2"></i> اطلب عبر واتساب
+                                            </a>
                                         </div>
                                     </div>
                                 </div>

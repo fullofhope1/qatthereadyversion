@@ -3,7 +3,6 @@
 
 class SaleRepository extends BaseRepository
 {
-
     public function create(array $data)
     {
         $defaults = [
@@ -18,6 +17,8 @@ class SaleRepository extends BaseRepository
             'unit_type' => 'weight',
             'quantity_units' => 0,
             'price' => 0,
+            'paid_amount' => 0,
+            'refund_amount' => 0,
             'payment_method' => 'Cash',
             'is_paid' => 1,
             'transfer_sender' => null,
@@ -31,12 +32,14 @@ class SaleRepository extends BaseRepository
 
         $sql = "INSERT INTO sales (
             sale_date, due_date, customer_id, qat_type_id, purchase_id, leftover_id, 
-            qat_status, weight_grams, unit_type, quantity_units, price, payment_method, is_paid, 
+            qat_status, weight_grams, unit_type, quantity_units, price, 
+            paid_amount, refund_amount, payment_method, is_paid, 
             transfer_sender, transfer_receiver, transfer_number, transfer_company, 
             debt_type, notes
         ) VALUES (
             :sale_date, :due_date, :customer_id, :qat_type_id, :purchase_id, :leftover_id, 
-            :qat_status, :weight_grams, :unit_type, :quantity_units, :price, :payment_method, :is_paid, 
+            :qat_status, :weight_grams, :unit_type, :quantity_units, :price, 
+            :paid_amount, :refund_amount, :payment_method, :is_paid, 
             :transfer_sender, :transfer_receiver, :transfer_number, :transfer_company, 
             :debt_type, :notes
         )";
@@ -46,43 +49,83 @@ class SaleRepository extends BaseRepository
         $filtered = array_intersect_key($data, array_flip($allowed));
 
         $this->execute($sql, $filtered);
-        return $this->pdo->lastInsertId();
+        return (int)$this->getLastInsertId();
     }
 
     public function getSoldKgByPurchaseId($purchaseId)
     {
-        return $this->fetchColumn("SELECT SUM(weight_kg) FROM sales WHERE purchase_id = ?", [$purchaseId]) ?: 0;
+        return $this->fetchColumn("SELECT SUM(COALESCE(weight_kg, weight_grams/1000)) FROM sales WHERE purchase_id = ? AND is_returned = 0", [$purchaseId]) ?: 0;
     }
 
     public function getSoldUnitsByPurchaseId($purchaseId)
     {
-        return $this->fetchColumn("SELECT SUM(quantity_units) FROM sales WHERE purchase_id = ?", [$purchaseId]) ?: 0;
+        return $this->fetchColumn("SELECT SUM(quantity_units) FROM sales WHERE purchase_id = ? AND is_returned = 0", [$purchaseId]) ?: 0;
     }
 
     public function getSoldKgByLeftoverId($leftoverId)
     {
-        return $this->fetchColumn("SELECT SUM(weight_kg) FROM sales WHERE leftover_id = ?", [$leftoverId]) ?: 0;
+        return $this->fetchColumn("SELECT SUM(COALESCE(weight_kg, weight_grams/1000)) FROM sales WHERE leftover_id = ? AND is_returned = 0", [$leftoverId]) ?: 0;
     }
 
     public function getSoldUnitsByLeftoverId($leftoverId)
     {
-        return $this->fetchColumn("SELECT SUM(quantity_units) FROM sales WHERE leftover_id = ?", [$leftoverId]) ?: 0;
+        return $this->fetchColumn("SELECT SUM(quantity_units) FROM sales WHERE leftover_id = ? AND is_returned = 0", [$leftoverId]) ?: 0;
     }
 
-    public function getTodaySalesMapByPurchase($date)
+    public function getById($id)
     {
-        $sql = "SELECT purchase_id, SUM(weight_kg) as sold_kg 
+        return $this->fetchOne("SELECT * FROM sales WHERE id = ?", [$id]);
+    }
+
+    public function updateRefundAmount($id, $amount)
+    {
+        return $this->execute("UPDATE sales SET refund_amount = refund_amount + ? WHERE id = ?", [$amount, $id]);
+    }
+
+    public function updateRefundAmountAndQuantity($id, $amount, $weight, $units)
+    {
+        return $this->execute(
+            "UPDATE sales 
+             SET refund_amount = refund_amount + ?,
+                 returned_kg = returned_kg + ?,
+                 returned_units = returned_units + ?
+             WHERE id = ?", 
+            [$amount, $weight, $units, $id]
+        );
+    }
+
+    public function markAsReturned($id)
+    {
+        return $this->execute("UPDATE sales SET is_returned = 1 WHERE id = ?", [$id]);
+    }
+
+    public function logReturn($data)
+    {
+        $sql = "INSERT INTO refunds (customer_id, sale_id, refund_type, amount, reason, weight_kg, quantity_units, created_at) 
+                VALUES (?, ?, ?, ?, ?, ?, ?, NOW())";
+        return $this->execute($sql, [
+            $data['customer_id'], $data['sale_id'], $data['refund_type'], 
+            $data['amount'], $data['reason'], $data['weight_kg'], $data['quantity_units']
+        ]);
+    }
+
+    public function getSalesMap($date = null)
+    {
+        $sql = "SELECT purchase_id, 
+                       SUM(COALESCE(weight_kg, weight_grams/1000)) as sold_kg, 
+                       SUM(quantity_units) as sold_units 
                 FROM sales 
-                WHERE sale_date = ? AND purchase_id IS NOT NULL 
-                GROUP BY purchase_id";
-        return $this->pdo->prepare($sql)->execute([$date]) ? $this->pdo->prepare($sql)->fetchAll(PDO::FETCH_KEY_PAIR) : [];
-    }
-
-    // Improved fetch key pair helper needed in BaseRepository or handled here
-    public function getSalesMap($date)
-    {
-        $stmt = $this->pdo->prepare("SELECT purchase_id, SUM(weight_kg) as sold_kg, SUM(quantity_units) as sold_units FROM sales WHERE sale_date = ? AND purchase_id IS NOT NULL GROUP BY purchase_id");
-        $stmt->execute([$date]);
-        return $stmt->fetchAll(PDO::FETCH_ASSOC); // Changed from FETCH_KEY_PAIR as we now have two values per ID
+                WHERE is_returned = 0 AND purchase_id IS NOT NULL";
+        
+        $params = [];
+        if ($date) {
+            // FIX #11: Filter by sale_date (business date), not created_at (system timestamp)
+            $sql .= " AND sale_date >= ?";
+            $params[] = $date;
+        }
+        
+        $sql .= " GROUP BY purchase_id";
+        
+        return $this->fetchAll($sql, $params);
     }
 }

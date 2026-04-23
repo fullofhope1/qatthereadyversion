@@ -9,9 +9,17 @@ class ProductRepository extends BaseRepository
         return $this->fetchOne("SELECT * FROM qat_types WHERE name = ? LIMIT 1", [$name]);
     }
 
+    public function getById($id)
+    {
+        return $this->fetchOne("SELECT * FROM qat_types WHERE id = ?", [$id]);
+    }
+
     public function create(array $data)
     {
-        $sql = "INSERT INTO qat_types (name, description, media_path) VALUES (:name, :description, :media_path)";
+        $sql = "INSERT INTO qat_types (name, description, unit_type, media_path) VALUES (:name, :description, :unit_type, :media_path)";
+        $data['unit_type'] = $data['unit_type'] ?? 'weight';
+        $data['description'] = $data['description'] ?? '';
+        $data['media_path'] = $data['media_path'] ?? null;
         $this->execute($sql, $data);
         return $this->pdo->lastInsertId();
     }
@@ -24,7 +32,8 @@ class ProductRepository extends BaseRepository
         }
         $sql = "UPDATE qat_types SET " . implode(', ', $fields) . " WHERE id = :id";
         $data['id'] = $id;
-        return $this->execute($sql, $data);
+        $this->execute($sql, $data);
+        return (int)$this->getLastInsertId();
     }
 
     public function getAllActive()

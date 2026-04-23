@@ -8,7 +8,7 @@ include 'includes/header.php';
 $today = date('Y-m-d');
 
 // Today's Sales Total
-$todaySales = $pdo->query("SELECT SUM(price) FROM sales WHERE sale_date = '$today'")->fetchColumn() ?: 0;
+$todaySales = $pdo->query("SELECT SUM(price - COALESCE(refund_amount, 0)) FROM sales WHERE sale_date = '$today' AND is_returned = 0")->fetchColumn() ?: 0;
 
 // Total Debts
 $totalDebts = $pdo->query("SELECT SUM(total_debt) FROM customers")->fetchColumn() ?: 0;

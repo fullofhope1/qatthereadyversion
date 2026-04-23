@@ -172,9 +172,9 @@ foreach ($preview as $p) {
                     </tbody>
                 </table>
 
-                <form action="requests/close_day.php" method="POST" onsubmit="return confirm('هل أنت متأكد من إغلاق اليوم؟ سيؤدي ذلك لإنشاء مدخلات ممسي للغد.');">
+                <form action="requests/close_day.php" method="POST">
                     <input type="hidden" name="date" value="<?= $today ?>">
-                    <button type="submit" class="btn btn-danger w-100 btn-lg">إغلاق اليوم وترحيل الممسي</button>
+                    <button type="submit" class="btn btn-danger w-100 btn-lg mb-3" onclick="return confirm('هل أنت متأكد من إغلاق اليوم (الوردية)؟ سيتم ترحيل جميع البضاعة الجاهزة للمراحل التالية.');">إغلاق الوردية وترحيل البضاعة</button>
                 </form>
             </div>
         </div>

@@ -15,7 +15,7 @@ function trigger_auto_closing($pdo, $targetDate = null, $force = false)
         UNION
         SELECT MIN(COALESCE(sale_date, DATE(created_at))) as d FROM sales WHERE payment_method = 'Debt' AND debt_type = 'Daily' AND is_paid = 0 AND (sale_date <= ? OR (sale_date IS NULL AND DATE(created_at) <= ?))
         UNION
-        SELECT MIN(sale_date) as d FROM leftovers WHERE status = 'Transferred_Next_Day' AND sale_date <= ?
+        SELECT MIN(sale_date) as d FROM leftovers WHERE status IN ('Transferred_Next_Day', 'Auto_Momsi', 'Momsi_Day_1', 'Momsi_Day_2') AND sale_date <= ?
     ) as unclosed_dates");
     $stmt->execute([$limitDate, $limitDate, $limitDate, $limitDate, $limitDate]);
 

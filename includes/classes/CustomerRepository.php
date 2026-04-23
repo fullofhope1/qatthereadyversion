@@ -50,6 +50,12 @@ class CustomerRepository extends BaseRepository
 
     public function decrementDebt($id, $amount)
     {
-        return $this->execute("UPDATE customers SET total_debt = total_debt - ? WHERE id = ?", [$amount, $id]);
+        // FIX #7: Use GREATEST(0,...) to prevent total_debt from going negative
+        return $this->execute("UPDATE customers SET total_debt = GREATEST(0, total_debt - ?) WHERE id = ?", [$amount, $id]);
+    }
+
+    public function getDebtBalance($id)
+    {
+        return (float)$this->fetchColumn("SELECT total_debt FROM customers WHERE id = ?", [$id]);
     }
 }

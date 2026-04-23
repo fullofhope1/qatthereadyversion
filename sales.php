@@ -20,6 +20,40 @@ $todaysStock = $saleService->getTodaysStock($today);
 
 $jsonStock = json_encode($todaysStock);
 $jsonCustomers = json_encode($customers);
+
+// --- Receipt Notification Logic ---
+$saleReceipt = null;
+if (isset($_GET['success']) && isset($_GET['sale_id'])) {
+    $saleId = (int)$_GET['sale_id'];
+    $saleReceipt = $saleRepo->getById($saleId);
+    if ($saleReceipt) {
+        $saleReceipt['cust_name'] = $customerRepo->getById($saleReceipt['customer_id'])['name'] ?? 'عميل';
+        $saleReceipt['cust_phone'] = $customerRepo->getById($saleReceipt['customer_id'])['phone'] ?? '';
+        $saleReceipt['cust_total_debt'] = $customerRepo->getById($saleReceipt['customer_id'])['total_debt'] ?? 0;
+        $saleReceipt['type_name'] = $productRepo->getById($saleReceipt['qat_type_id'])['name'] ?? 'قات';
+        
+        // Notifications Config
+        $notifData = require 'config/notifications.php';
+        $acc = $notifData['accounts'];
+        
+        // Template
+        $todayAr = date('Y-m-d'); 
+        $saleAmount = number_format($saleReceipt['price']);
+        $totalDebt = number_format($saleReceipt['cust_total_debt']);
+        $weightOrUnits = ($saleReceipt['unit_type'] === 'weight') ? ($saleReceipt['weight_grams'] . ' جرام') : ($saleReceipt['quantity_units'] . ' ' . $saleReceipt['unit_type']);
+        
+        $msg = "إشعار من القادري وماجد لأجود أنواع القات: " . $todayAr . "\n";
+        $msg .= "عليكم المبلغ: " . $saleAmount . " ريال\n";
+        $msg .= "نوع القات: " . $saleReceipt['type_name'] . " / " . $weightOrUnits . "\n";
+        $msg .= "الإجمالي عليكم: " . $totalDebt . " ريال\n\n";
+        $msg .= "ارقام حساباتنا:\n";
+        $msg .= "جيب: " . $acc['jeeb'] . "\n";
+        $msg .= "جوالي: " . $acc['jawwali'] . "\n";
+        $msg .= "كريمي: " . $acc['kuraimi'];
+        
+        $saleReceipt['wa_url'] = "https://wa.me/" . $saleReceipt['cust_phone'] . "?text=" . rawurlencode($msg);
+    }
+}
 ?>
 
 <style>
@@ -123,6 +157,22 @@ $jsonCustomers = json_encode($customers);
     <!-- Summary Bar (Progress) -->
     <div class="row justify-content-center">
         <div class="col-md-10">
+            <?php if ($saleReceipt): ?>
+                <div class="alert alert-success border-0 shadow-sm rounded-4 p-4 mb-4 animate__animated animate__bounceIn" dir="rtl">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div>
+                            <h4 class="fw-bold mb-1 text-success"><i class="fas fa-check-circle me-2"></i> تم تسجيل البيع بنجاح!</h4>
+                            <p class="mb-0 text-secondary">العميل: <b><?= htmlspecialchars($saleReceipt['cust_name']) ?></b> | المبلغ: <b><?= number_format($saleReceipt['price']) ?> ريال</b></p>
+                        </div>
+                        <div>
+                            <a href="<?= $saleReceipt['wa_url'] ?>" target="_blank" class="btn btn-success rounded-pill px-4 fw-bold shadow-sm">
+                                <i class="fab fa-whatsapp me-2"></i> إرسال إشعار للعميل
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            <?php endif; ?>
+
             <div class="summary-bar" id="summaryBar" dir="rtl">
                 <span>النوع: <b id="s_type">-</b></span>
                 <span>الرعوي: <b id="s_rawi">-</b></span>
@@ -145,6 +195,7 @@ $jsonCustomers = json_encode($customers);
         <input type="hidden" name="sale_date" value="<?= date('Y-m-d') ?>">
         <input type="hidden" name="qat_type_id" id="i_type">
         <input type="hidden" name="purchase_id" id="i_pid">
+        <input type="hidden" name="leftover_id" id="i_leftover">
         <input type="hidden" name="customer_id" id="i_cust">
         <input type="hidden" name="weight_grams" id="i_weight">
         <input type="hidden" name="quantity_units" id="i_units">
@@ -365,11 +416,25 @@ $jsonCustomers = json_encode($customers);
             document.getElementById('i_type').value = data.id;
             document.getElementById('s_type').innerText = data.name;
             populateProviders(data.id);
-        } else if (step === 2) { // Provider
-            document.getElementById('i_pid').value = data.id;
+        } else if (step === 2) { // Provider/Stock Item
+            // Reset both IDs first to ensure mutual exclusivity
+            document.getElementById('i_pid').value = "";
+            document.getElementById('i_leftover').value = "";
+
+            if (data.type === 'leftover') {
+                document.getElementById('i_leftover').value = data.id;
+            } else {
+                document.getElementById('i_pid').value = data.id;
+            }
+            
             document.getElementById('s_rawi').innerText = data.name;
             document.getElementById('i_utype').value = data.unit_type;
-            window._selectedRemainingUnits = data.remaining_units || 10;
+            window._selectedRemainingUnits = data.remaining_units || 0;
+            window._selectedRemainingKg = data.remaining_kg || 0;
+            
+            // For real-time validation
+            window.currentMaxKg = data.remaining_kg || 0;
+            window.currentMaxUnits = data.remaining_units || 0;
 
             goTo(3); // Go to Customer selection
             return;
@@ -443,6 +508,14 @@ $jsonCustomers = json_encode($customers);
         }
     }
 
+    function toggleOtherCompany(sel) {
+        const otherInput = document.getElementById('t_company_other');
+        if (otherInput) {
+            otherInput.classList.toggle('d-none', sel.value !== 'أخرى');
+            if (sel.value !== 'أخرى') otherInput.value = '';
+        }
+    }
+
     function finishTransfer() {
         let receiver = document.getElementById('t_receiver_val').value;
         if (receiver === 'أخرى') {
@@ -491,12 +564,17 @@ $jsonCustomers = json_encode($customers);
         currentStep = step;
     }
 
-    function backStep(from) {
-        if (from === 6 && currentStep === '_transfer') {
+    function backStep(targetStep) {
+        if (targetStep === 6 && currentStep === '_transfer') {
             goTo(6);
             return;
         }
-        goTo(from);
+        const utype = document.getElementById('i_utype').value;
+        if (targetStep === 4 && utype !== 'weight') {
+            goTo('4u');
+            return;
+        }
+        goTo(targetStep);
     }
 
     // --- Helpers ---
@@ -510,6 +588,7 @@ $jsonCustomers = json_encode($customers);
 
         const providers = stockData.filter(i => {
             if (i.qat_type_id != typeId) return false;
+            if (i.type === 'leftover') return false; // Hide leftovers from main sales page
             // Unit-based products are now visible to all staff
             return true;
         });
@@ -526,15 +605,20 @@ $jsonCustomers = json_encode($customers);
                 let unitText = '';
                 if (p.unit_type === 'weight') {
                     remaining = parseFloat(p.remaining_kg);
-                    unitText = 'kg';
+                    unitText = ' كجم';
                 } else {
                     remaining = parseInt(p.remaining_units);
-                    unitText = p.unit_type;
+                    unitText = ' ' + p.unit_type;
                 }
 
                 const isSoldOut = remaining <= 0;
 
-                let label = p.provider_name;
+                let label = `<b>${p.provider_name}</b>`;
+                if (p.status_label) {
+                    const badgeClass = p.type === 'leftover' ? 'bg-warning text-dark' : 'bg-light text-dark';
+                    label += `<br><span class="badge ${badgeClass} mb-1" style="font-size:0.7rem">${p.status_label}</span>`;
+                }
+
                 if (isSoldOut) {
                     label += '<br><small class="text-danger">(نفذ)</small>';
                     btn.style.opacity = '0.6';
@@ -549,9 +633,11 @@ $jsonCustomers = json_encode($customers);
                 if (!isSoldOut) {
                     btn.onclick = () => nextStep(2, {
                         id: p.id,
+                        type: p.type, // purchase or leftover
                         name: p.provider_name,
                         unit_type: p.unit_type,
-                        remaining_units: p.remaining_units || 0
+                        remaining_units: p.remaining_units || 0,
+                        remaining_kg: p.remaining_kg || 0
                     });
                 }
 
@@ -570,6 +656,22 @@ $jsonCustomers = json_encode($customers);
         } else {
             grams.value = (kg.value * 1000).toFixed(0);
         }
+        
+        // Immediate Validation
+        const purchaseId = document.getElementById('i_pid').value;
+        const leftoverId = document.getElementById('i_leftover').value;
+        if (purchaseId || leftoverId) {
+            const errBox = document.getElementById('weight_error_msg');
+            const diffGrams = grams.value - (window.currentMaxKg * 1000);
+            if (diffGrams > 0) {
+                 errBox.innerHTML = '⚠️ الكمية غير متاحة! المتاح: <b>' + window.currentMaxKg + ' كجم</b>';
+                 errBox.classList.remove('d-none');
+                 document.getElementById('btn_confirm_weight').disabled = true;
+            } else {
+                 errBox.classList.add('d-none');
+                 document.getElementById('btn_confirm_weight').disabled = false;
+            }
+        }
     }
 
     function confirmManualWeight() {
@@ -578,14 +680,21 @@ $jsonCustomers = json_encode($customers);
             alert('الرجاء إدخال الوزن');
             return;
         }
+        
+        if (document.getElementById('btn_confirm_weight').disabled) {
+            return;
+        }
+
         // Inventory check BEFORE going to step 5
         const purchaseId = document.getElementById('i_pid').value;
+        const leftoverId = document.getElementById('i_leftover').value;
         const errBox = document.getElementById('weight_error_msg');
         errBox.classList.add('d-none');
 
-        if (purchaseId) {
+        if (purchaseId || leftoverId) {
             // Check available stock via AJAX
-            fetch('requests/check_stock.php?purchase_id=' + purchaseId + '&grams=' + grams)
+            const idParam = purchaseId ? 'purchase_id=' + purchaseId : 'leftover_id=' + leftoverId;
+            fetch('requests/check_stock.php?' + idParam + '&grams=' + grams)
                 .then(r => r.json())
                 .then(data => {
                     if (!data.ok) {
@@ -610,19 +719,50 @@ $jsonCustomers = json_encode($customers);
         }
     }
 
+    function syncUnits() {
+        const units = parseInt(document.getElementById('m_units_val').value);
+        const purchaseId = document.getElementById('i_pid').value;
+        const leftoverId = document.getElementById('i_leftover').value;
+        if (purchaseId || leftoverId) {
+            const errBox = document.getElementById('unit_error_msg');
+            const unitType = document.getElementById('i_utype').value;
+            if (units > window.currentMaxUnits) {
+                 errBox.innerHTML = '⚠️ الكمية غير متاحة! المتاح: <b>' + window.currentMaxUnits + ' ' + unitType + '</b>';
+                 errBox.classList.remove('d-none');
+                 document.getElementById('btn_confirm_units').disabled = true;
+            } else {
+                 errBox.classList.add('d-none');
+                 document.getElementById('btn_confirm_units').disabled = false;
+            }
+        }
+    }
+
+    // Add listener dynamically for unit input inside DOMContentLoaded or directly
+    document.addEventListener('DOMContentLoaded', () => {
+        const unitInput = document.getElementById('m_units_val');
+        if (unitInput) {
+            unitInput.addEventListener('input', syncUnits);
+        }
+    });
+
     function confirmManualUnits() {
         const units = parseInt(document.getElementById('m_units_val').value);
         if (!units || units <= 0) {
             alert('الرجاء إدخال العدد');
             return;
         }
+        if (document.getElementById('btn_confirm_units').disabled) {
+            return;
+        }
         const purchaseId = document.getElementById('i_pid').value;
+        const leftoverId = document.getElementById('i_leftover').value;
         const unitType = document.getElementById('i_utype').value;
         const errBox = document.getElementById('unit_error_msg');
         errBox.classList.add('d-none');
 
-        if (purchaseId) {
-            fetch('requests/check_stock.php?purchase_id=' + purchaseId + '&units=' + units + '&unit_type=' + encodeURIComponent(unitType))
+        if (purchaseId || leftoverId) {
+            const idParam = purchaseId ? 'purchase_id=' + purchaseId : 'leftover_id=' + leftoverId;
+            fetch('requests/check_stock.php?' + idParam + '&units=' + units + '&unit_type=' + encodeURIComponent(unitType))
                 .then(r => r.json())
                 .then(data => {
                     if (!data.ok) {
@@ -701,16 +841,20 @@ $jsonCustomers = json_encode($customers);
     // Customer UI Helpers
     function showAddCust() {
         document.getElementById('custList').classList.add('d-none');
+        const tf = document.getElementById('tayyarForm');
+        if (tf) tf.classList.add('d-none');
         document.getElementById('newCustForm').classList.remove('d-none');
         const ni = document.getElementById('new_name');
         if(ni) ni.focus();
     }
-    
+
     function showCustList() {
         document.getElementById('newCustForm').classList.add('d-none');
+        document.getElementById('tayyarForm') && document.getElementById('tayyarForm').classList.add('d-none');
         document.getElementById('custList').classList.remove('d-none');
         const cs = document.getElementById('cSearch');
         if(cs) cs.focus();
+        renderCustList(allCustomers);
     }
 
     // Format price as user types
@@ -724,15 +868,6 @@ $jsonCustomers = json_encode($customers);
             });
         }
     });
-
-    // Toggle other company input
-    function toggleOtherCompany(sel) {
-        const otherInput = document.getElementById('t_company_other');
-        if (otherInput) {
-            otherInput.classList.toggle('d-none', sel.value !== 'أخرى');
-            if (sel.value !== 'أخرى') otherInput.value = '';
-        }
-    }
 
     // Contact Picker API
     async function pickContact(fieldId) {
@@ -752,12 +887,6 @@ $jsonCustomers = json_encode($customers);
     }
 
     // Customer Logic
-    function showCustList() {
-        document.getElementById('custList').classList.remove('d-none');
-        document.getElementById('newCustForm').classList.add('d-none');
-        renderCustList(allCustomers);
-    }
-
     function filterCust() {
         const term = document.getElementById('cSearch').value.toLowerCase();
         const filtered = allCustomers.filter(c => {
@@ -776,10 +905,7 @@ $jsonCustomers = json_encode($customers);
             a.className = 'list-group-item list-group-item-action text-end';
             a.style.cursor = 'pointer';
             a.innerHTML = `<b>${c.name}</b> <small>${c.phone || ''}</small>`;
-            a.onclick = () => nextStep(3, {
-                id: c.id,
-                name: c.name
-            });
+            a.onclick = () => nextStep(3, { id: c.id, name: c.name });
             div.appendChild(a);
         });
     }
@@ -787,42 +913,32 @@ $jsonCustomers = json_encode($customers);
     function showTayyarPrompt() {
         document.getElementById('custList').classList.add('d-none');
         document.getElementById('newCustForm').classList.add('d-none');
-        document.getElementById('tayyarForm').classList.remove('d-none');
+        const tf = document.getElementById('tayyarForm');
+        if (tf) tf.classList.remove('d-none');
     }
 
     function confirmTayyar() {
         const name = document.getElementById('t_name').value;
         if (!name) return alert("الاسم مطلوب");
-
-        // Use existing saveNewCust logic but for t_name
         document.getElementById('new_name').value = name;
         document.getElementById('new_phone').value = '';
         saveNewCust();
-    }
-
-    function showAddCust() {
-        document.getElementById('custList').classList.add('d-none');
-        document.getElementById('tayyarForm').classList.add('d-none');
-        document.getElementById('newCustForm').classList.remove('d-none');
     }
 
     function saveNewCust() {
         const name = document.getElementById('new_name').value.trim();
         const phone = document.getElementById('new_phone').value.trim();
 
-        if (!name) return alert("الاسم مطلوب (Name is required)");
-        if (!phone) return alert("رقم الهاتف مطلوب (Phone is required)");
+        if (!name) return alert("الاسم مطلوب");
+        if (!phone) return alert("رقم الهاتف مطلوب");
         if (!/^\d{7,15}$/.test(phone)) return alert("رقم الهاتف غير صحيح - يجب أن يكون أرقاماً فقط (7-15 رقم)");
 
         const formData = new FormData();
         formData.append('name', name);
         formData.append('phone', phone);
 
-        fetch('requests/add_customer_ajax.php', {
-                method: 'POST',
-                body: formData
-            })
-            .then(response => response.json())
+        fetch('requests/add_customer_ajax.php', { method: 'POST', body: formData })
+            .then(r => r.json())
             .then(data => {
                 if (data.success) {
                     allCustomers.push({ id: data.id, name: name, phone: phone });

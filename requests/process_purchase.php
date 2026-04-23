@@ -16,13 +16,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     try {
         $data = [
             'purchase_date' => !empty($_POST['purchase_date']) ? $_POST['purchase_date'] : date('Y-m-d'),
-            // Note: vendor_name is currently procedural-only or legacy field, 
-            // the new system uses provider_id. We'll try to map if possible or just use what service expects.
-            'qat_type_id' => $_POST['qat_type_id'],
-            'quantity_kg' => (float)$_POST['quantity_kg'],
-            'agreed_price' => (float)($_POST['agreed_price'] ?? 0),
-            'status' => 'Fresh',
-            'created_by' => $_SESSION['user_id']
+            'provider_id'   => !empty($_POST['provider_id']) ? (int)$_POST['provider_id'] : null, // FIX #10
+            'qat_type_id'   => (int)$_POST['qat_type_id'],
+            'quantity_kg'   => (float)$_POST['quantity_kg'],
+            'agreed_price'  => (float)($_POST['agreed_price'] ?? 0),
+            'status'        => 'Fresh',
+            'created_by'    => $_SESSION['user_id']
         ];
 
         // If repo expects vendor_name, add it back or handle provider mapping

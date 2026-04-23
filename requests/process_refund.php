@@ -1,69 +1,56 @@
 <?php
-session_start();
+// requests/process_refund.php
 require '../config/db.php';
-require '../includes/auth.php';
+require_once '../includes/Autoloader.php';
+require_once '../includes/require_auth.php';
 
-// requireRole('super_admin');
+// Modernized handler replacing legacy procedural code with RefundService.
+// This ensures that ALL refunds (even from legacy reports) use the same validated logic.
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     try {
-        $sale_id = $_POST['sale_id'];
-        $amount = $_POST['amount']; // The Refund Amount
+        $saleId = (int)($_POST['sale_id'] ?? 0);
+        $amount = (float)($_POST['amount'] ?? 0);
 
-        if ($amount <= 0) {
-            die("Invalid amount");
+        if (!$saleId || $amount <= 0) {
+            throw new Exception("بيانات غير مكتملة أو مبلغ غير صحيح.");
         }
 
-        // Get Sale Details
-        $stmt = $pdo->prepare("SELECT * FROM sales WHERE id = ?");
-        $stmt->execute([$sale_id]);
-        $sale = $stmt->fetch();
+        // Initialize Services & Repositories
+        $refundRepo   = new RefundRepository($pdo);
+        $customerRepo = new CustomerRepository($pdo);
+        $saleRepo     = new SaleRepository($pdo);
+        $purchaseRepo = new PurchaseRepository($pdo);
+        $leftoverRepo = new LeftoverRepository($pdo);
 
-        if (!$sale) die("Sale not found");
+        $service = new RefundService($refundRepo, $customerRepo, $saleRepo, $purchaseRepo, $leftoverRepo);
 
-        // 1. Update Sale Record (Track Refund)
-        // We accumulate refunds just in case (though usually one time)
-        $new_refund_total = $sale['refund_amount'] + $amount;
+        // Map POST data to Service requirements
+        // Legacy form only provides sale_id and amount, so we treat it as a financial compensation (No physical return).
+        $refundData = [
+            'sale_id'     => $saleId,
+            'amount'      => $amount,
+            'customer_id' => $_POST['customer_id'] ?? null, // Will be fetched by service if missing
+            'refund_type' => $_POST['refund_type'] ?? 'Cash', // Default to Cash for legacy report buttons
+            'note'        => $_POST['reason'] ?? 'مرتجع مالي من تقارير المبيعات'
+        ];
 
-        $pdo->beginTransaction();
-
-        $stmt = $pdo->prepare("UPDATE sales SET refund_amount = ? WHERE id = ?");
-        $stmt->execute([$new_refund_total, $sale_id]);
-
-        // 2. Handle Financial Impact
-        if ($sale['payment_method'] === 'Debt' && $sale['is_paid'] == 0) {
-            // IF DEBT: Reduce Customer Debt
-            // AND reduce the sale price? Or just the debt balance?
-            // Usually, if I sold for 5000 debt, and refund 1000. 
-            // The sale effective price becomes 4000.
-            // Customer owes 4000.
-            // So we lower Customer Debt.
-
-            if ($sale['customer_id']) {
-                $stmt = $pdo->prepare("UPDATE customers SET total_debt = total_debt - ? WHERE id = ?");
-                $stmt->execute([$amount, $sale['customer_id']]);
-            }
-        } else {
-            // IF CASH / TRANSFER / PAID DEBT: 
-            // User gives money BACK to customer.
-            // We should record this as an Expense (Cash Out) OR just a Refund log.
-            // To make "Cash Report" accurate (Sales - Expenses), we should treat Refund as Expense?
-            // Or subtract from Sales Total?
-            // User asked "give me back some money". Implicitly cash out.
-            // Let's add an Expense record automatically so it shows up in daily close.
-
-            $desc = "Refund for Sale #{$sale_id} (Customer Return)";
-            $stmt = $pdo->prepare("INSERT INTO expenses (expense_date, description, amount, category, created_by) VALUES (CURDATE(), ?, ?, 'Refund', ?)");
-            $stmt->execute([$desc, $amount, $_SESSION['user_id']]);
+        // Ensure customer_id is present for Debt refunds
+        if ($refundData['refund_type'] === 'Debt' && empty($refundData['customer_id'])) {
+            $sale = $saleRepo->getById($saleId);
+            $refundData['customer_id'] = $sale['customer_id'] ?? null;
         }
 
-        $pdo->commit();
+        $service->processRefund($refundData, $_SESSION['user_id']);
 
-        // Redirect back to report
-        header("Location: ../reports.php?date=" . $sale['sale_date'] . "&detail=all&success=Refunded{$amount}");
+        $returnUrl = $_POST['return_url'] ?? "../reports.php";
+        $msg = "تمت عملية المرتجع بنجاح بقيمة " . number_format($amount);
+        header("Location: $returnUrl" . (strpos($returnUrl, '?') !== false ? "&" : "?") . "success=1&msg=" . urlencode($msg));
         exit;
-    } catch (PDOException $e) {
-        $pdo->rollBack();
-        die("Error: " . $e->getMessage());
+    } catch (Exception $e) {
+        $returnUrl = $_POST['return_url'] ?? "../reports.php";
+        $error = urlencode($e->getMessage());
+        header("Location: $returnUrl" . (strpos($returnUrl, '?') !== false ? "&" : "?") . "error=$error");
+        exit;
     }
 }

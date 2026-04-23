@@ -431,6 +431,9 @@ $shipments = $purchaseRepo->getTodayShipmentsByUserId($today, $user_id);
                                             <div>
                                                 <?php if ($p['is_received']): ?>
                                                     <span class="badge bg-success-subtle text-success rounded-pill border border-success-subtle px-2">تم الاستلام</span>
+                                                    <button type="button" class="btn btn-sm btn-outline-danger ms-2" onclick="openDiscountModal(<?= $p['id'] ?>, '<?= htmlspecialchars($p['provider_name']) ?>', '<?= htmlspecialchars($p['type_name']) ?>')">
+                                                        <i class="fas fa-percent"></i> خصم
+                                                    </button>
                                                 <?php else: ?>
                                                     <span class="badge bg-warning-subtle text-warning rounded-pill border border-warning-subtle px-2">قيد الشحن</span>
                                                 <?php endif; ?>
@@ -483,7 +486,38 @@ $shipments = $purchaseRepo->getTodayShipmentsByUserId($today, $user_id);
     </div>
 </div>
 
+<!-- Discount Modal -->
+<div class="modal fade" id="discountModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 rounded-4 shadow">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title fw-bold">تسجيل خصم متأخر</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="requests/process_purchase_discount.php" method="POST">
+                <div class="modal-body p-4 text-end">
+                    <input type="hidden" name="purchase_id" id="discount_purchase_id">
+                    <p class="mb-3">تسجيل خصم للشحنة: <b id="discount_info" class="text-danger"></b></p>
+                    <div class="mb-3">
+                        <label class="small fw-bold mb-1">مبلغ الخصم (ريال) <span class="text-danger">*</span></label>
+                        <input type="number" name="amount" class="form-control form-control-lg rounded-3 fw-bold text-danger text-center" required placeholder="0" inputmode="numeric">
+                    </div>
+                </div>
+                <div class="modal-footer border-0 p-4 pt-0">
+                    <button type="submit" class="btn btn-danger w-100 rounded-pill fw-bold">تأكيد الخصم</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 <script>
+    function openDiscountModal(id, provider, type) {
+        document.getElementById('discount_purchase_id').value = id;
+        document.getElementById('discount_info').innerText = provider + " (" + type + ")";
+        new bootstrap.Modal(document.getElementById('discountModal')).show();
+    }
+
     // Weight & Price Logic
     const kgInput = document.getElementById('weight_kg');
     const gramsInput = document.getElementById('weight_grams');
@@ -642,11 +676,26 @@ $shipments = $purchaseRepo->getTodayShipmentsByUserId($today, $user_id);
                     const option = new Option(data.provider.name, data.provider.id);
                     select.add(option);
                     select.value = data.provider.id;
-                    bootstrap.Modal.getInstance(document.getElementById('addProviderModal')).hide();
+                    
+                    // Clear search and reset list visibility
+                    const searchInput = document.getElementById('provider_search');
+                    if (searchInput) {
+                        searchInput.value = '';
+                        filterProviders();
+                    }
+
+                    const modalEl = document.getElementById('addProviderModal');
+                    const modal = bootstrap.Modal.getInstance(modalEl);
+                    if (modal) modal.hide();
+                    
+                    // Clear modal fields
+                    document.getElementById('new_provider_name').value = '';
+                    document.getElementById('new_provider_phone').value = '';
                 } else {
-                    alert('Error: ' + data.message);
+                    alert('خطأ: ' + data.message);
                 }
-            });
+            })
+            .catch(err => alert('حدث خطأ في الاتصال: ' + err.message));
     }
 
     // Universal Focus Navigation Helper

@@ -30,6 +30,16 @@ class ReportService extends BaseService
                 return $this->reportRepo->getExpensesList($reportType, $date, $month, $year, $userId);
             case 'Waste':
                 return $this->reportRepo->getWasteList($reportType, $date, $month, $year);
+            case 'Staff':
+                return $this->reportRepo->getStaffStats($reportType, $date, $month, $year, $userId);
+            case 'Customers':
+                return $this->reportRepo->getCustomerStats($reportType, $date, $month, $year);
+            case 'Leftovers_1':
+                return $this->reportRepo->getLeftoversList('Day1', $reportType, $date, $month, $year);
+            case 'Leftovers_2':
+                return $this->reportRepo->getLeftoversList('Day2', $reportType, $date, $month, $year);
+            case 'Damaged':
+                return $this->reportRepo->getLeftoversList('Damaged', $reportType, $date, $month, $year);
             case 'unknown_transfers':
                 return $this->reportRepo->getUnknownTransfersList($reportType, $date, $month, $year);
             case 'Printable':

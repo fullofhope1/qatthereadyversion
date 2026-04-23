@@ -22,13 +22,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     $refundRepo = new RefundRepository($pdo);
     $customerRepo = new CustomerRepository($pdo);
-    $service = new RefundService($refundRepo, $customerRepo);
+    $saleRepo = new SaleRepository($pdo);
+    $purchaseRepo = new PurchaseRepository($pdo);
+    $leftoverRepo = new LeftoverRepository($pdo);
+    
+    $service = new RefundService($refundRepo, $customerRepo, $saleRepo, $purchaseRepo, $leftoverRepo);
 
     $data = [
-        'customer_id' => $_POST['customer_id'],
-        'amount' => $_POST['amount'],
+        'customer_id' => (int)$_POST['customer_id'],
+        'amount' => (float)$_POST['amount'],
         'refund_type' => $_POST['refund_type'],
-        'reason' => $_POST['reason']
+        'reason' => $_POST['reason'],
+        'weight_kg' => (float)($_POST['weight_kg'] ?? 0),
+        'quantity_units' => (int)($_POST['quantity_units'] ?? 0),
+        'sale_id' => !empty($_POST['sale_id']) ? (int)$_POST['sale_id'] : null
     ];
 
     try {

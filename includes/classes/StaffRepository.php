@@ -16,22 +16,25 @@ class StaffRepository extends BaseRepository
         return $this->fetchOne("SELECT * FROM staff WHERE id = ?", [$id]);
     }
 
-    public function getWithCurrentWithdrawals($userId, $role = null, $subRole = null)
+    public function getWithCurrentWithdrawals($userId, $role = null, $subRole = null, $showInactive = false)
     {
-        // super_admin sees ALL staff
+        $statusFilter = $showInactive ? "" : " AND s.is_active = 1";
+
+        // super_admin sees ALL staff (from their own operation context as clarified by user)
         if ($role === 'super_admin') {
             $sql = "SELECT s.*,
                     (SELECT SUM(amount) FROM expenses WHERE staff_id = s.id AND category = 'Staff') as current_withdrawals
                     FROM staff s
-                    ORDER BY s.name ASC";
+                    WHERE 1=1 $statusFilter
+                    ORDER BY s.is_active DESC, s.name ASC";
             return $this->fetchAll($sql);
         }
 
         $sql = "SELECT s.*,
                 (SELECT SUM(amount) FROM expenses WHERE staff_id = s.id AND category = 'Staff') as current_withdrawals
                 FROM staff s
-                WHERE s.created_by = ?
-                ORDER BY s.name ASC";
+                WHERE s.created_by = ? $statusFilter
+                ORDER BY s.is_active DESC, s.name ASC";
         return $this->fetchAll($sql, [$userId]);
     }
 
@@ -59,5 +62,20 @@ class StaffRepository extends BaseRepository
     public function getTotalWithdrawalsForAll($userId)
     {
         return $this->fetchColumn("SELECT SUM(amount) FROM expenses WHERE category = 'Staff' AND created_by = ?", [$userId]) ?: 0;
+    }
+
+    public function delete($id)
+    {
+        return $this->execute("DELETE FROM staff WHERE id = ?", [$id]);
+    }
+
+    public function deactivate($id)
+    {
+        return $this->execute("UPDATE staff SET is_active = 0 WHERE id = ?", [$id]);
+    }
+
+    public function activate($id)
+    {
+        return $this->execute("UPDATE staff SET is_active = 1 WHERE id = ?", [$id]);
     }
 }

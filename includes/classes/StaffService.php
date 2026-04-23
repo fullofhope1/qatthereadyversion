@@ -15,14 +15,19 @@ class StaffService extends BaseService
         return $this->staffRepo->create($data);
     }
 
-    public function getStaffList($userId, $role = null, $subRole = null)
+    public function getStaffList($userId, $role = null, $subRole = null, $showInactive = false)
     {
-        return $this->staffRepo->getWithCurrentWithdrawals($userId, $role, $subRole);
+        return $this->staffRepo->getWithCurrentWithdrawals($userId, $role, $subRole, $showInactive);
     }
 
     public function updateStaff($id, array $data)
     {
         return $this->staffRepo->update($id, $data);
+    }
+
+    public function deactivateStaff($id)
+    {
+        return $this->staffRepo->deactivate($id);
     }
 
     public function getStaffWithdrawals($staffId, $month)

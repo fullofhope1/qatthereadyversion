@@ -65,8 +65,13 @@ class CustomerService extends BaseService
             }
         }
 
+        // Validation: Phone required
+        if (empty($phone)) {
+            throw new Exception("رقم الهاتف مطلوب (Phone is required)");
+        }
+
         // Check phone uniqueness if changed
-        if (!empty($phone) && $existing['phone'] !== $phone) {
+        if ($existing['phone'] !== $phone) {
             if ($this->repository->getByPhone($phone)) {
                 throw new Exception("رقم الهاتف الجديد موجود مسبقاً (New phone number already exists)");
             }

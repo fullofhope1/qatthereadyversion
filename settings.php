@@ -171,9 +171,9 @@ $is_full_admin = (isset($_SESSION['role']) && $_SESSION['role'] === 'super_admin
                                             <div id="backupStatus"></div>
 
                                             <button type="button" id="btnBackup" onclick="runBackup()" class="btn btn-success rounded-pill px-4 fw-bold shadow-sm w-100 py-3">
-                                                <i class="fas fa-file-export me-2"></i> إرسال نسخة احتياطية الآن
+                                                <i class="fas fa-share-alt me-2"></i> إنشاء والرفع للدرايف (مشاركة)
                                             </button>
-                                            <div class="form-text mt-3 text-center"><i class="fas fa-info-circle me-1"></i> سيتم حفظ نسخة أيضاً في مجلد /backups</div>
+                                            <div class="form-text mt-3 text-center"><i class="fas fa-info-circle me-1"></i> (من الجوال: سيفتح قائمة المشاركة للرفع للدرايف)</div>
 
                                             <hr class="my-4">
                                             <h6 class="fw-bold mb-3"><i class="fas fa-history me-2"></i> النسخ السابقة</h6>
@@ -458,30 +458,49 @@ $is_full_admin = (isset($_SESSION['role']) && $_SESSION['role'] === 'super_admin
             }
         }
 
-        function runBackup() {
+        async function runBackup() {
             const btn = document.getElementById('btnBackup');
             const status = document.getElementById('backupStatus');
             btn.disabled = true;
             btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> جاري التحضير...';
             status.innerHTML = '';
 
-            fetch('requests/backup_db.php')
-                .then(r => r.json())
-                .then(data => {
-                    if (data.success) {
-                        status.innerHTML = `<div class="alert alert-success small">${data.message}</div>`;
-                    } else {
-                        status.innerHTML = `<div class="alert alert-danger small">${data.message}</div>`;
+            try {
+                const response = await fetch('requests/backup_db.php');
+                const data = await response.json();
+                
+                if (data.success) {
+                    status.innerHTML = `<div class="alert alert-success small">${data.message}</div>`;
+                    
+                    // Web Share API for Mobile
+                    if (navigator.share && data.filename) {
+                        try {
+                            const fileUrl = 'backups/' + data.filename;
+                            const fileRes = await fetch(fileUrl);
+                            const blob = await fileRes.blob();
+                            const file = new File([blob], data.filename, { type: 'application/sql' });
+                            
+                            if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                                await navigator.share({
+                                    files: [file],
+                                    title: 'نسخة احتياطية - القادري وماجد',
+                                    text: 'ملف قاعدة البيانات'
+                                });
+                            }
+                        } catch (shareErr) {
+                            console.log('Sharing failed', shareErr);
+                        }
                     }
-                })
-                .catch(e => {
-                    status.innerHTML = `<div class="alert alert-danger small">خطأ في الاتصال: ${e.message}</div>`;
-                })
-                .finally(() => {
-                    btn.disabled = false;
-                    btn.innerHTML = '<i class="fas fa-file-export me-2"></i> إرسال نسخة احتياطية الآن';
-                    loadBackups();
-                });
+                } else {
+                    status.innerHTML = `<div class="alert alert-danger small">${data.message}</div>`;
+                }
+            } catch (e) {
+                status.innerHTML = `<div class="alert alert-danger small">خطأ في الاتصال: ${e.message}</div>`;
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-share-alt me-2"></i> إنشاء والرفع للدرايف (مشاركة)';
+                loadBackups();
+            }
         }
 
         function loadBackups() {

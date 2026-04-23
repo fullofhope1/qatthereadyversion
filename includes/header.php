@@ -267,6 +267,7 @@ if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
 
                         <?php if ($is_full): ?>
                             <li class="nav-item"><a class="nav-link <?= navActive('refunds.php', $current_page) ?>" href="refunds.php"><i class="fas fa-hand-holding-usd me-1"></i> التعويضات</a></li>
+                            <li class="nav-item"><a class="nav-link <?= navActive('returns.php', $current_page) ?>" href="returns.php"><i class="fas fa-undo me-1"></i> المرتجعات</a></li>
                         <?php endif; ?>
 
                         <?php if ($is_full || $sub_role === 'seller'): ?>
@@ -281,12 +282,11 @@ if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
                             <li class="nav-item"><a class="nav-link <?= navActive('unknown_transfers.php', $current_page) ?>" href="unknown_transfers.php"><i class="fas fa-question-circle me-1"></i> تحويلات مجهولة</a></li>
                         <?php endif; ?>
 
-                        <?php if ($is_full || $sub_role === 'sales_debts'): ?>
-                            <li class="nav-item"><a class="nav-link <?= navActive('leftovers.php', $current_page) ?>" href="leftovers.php"><i class="fas fa-box-open me-1"></i> إدارة البقايا</a></li>
-                        <?php endif; ?>
+                          <!-- Removed manual leftovers management -->
 
                         <?php if ($is_full || $sub_role === 'sales_debts' || $sub_role === 'seller'): ?>
-                            <li class="nav-item"><a class="nav-link <?= navActive('sales_leftovers.php', $current_page) ?>" href="sales_leftovers.php"><i class="fas fa-recycle me-1"></i> بيع البقايا</a></li>
+                            <li class="nav-item"><a class="nav-link <?= navActive('sales_leftovers_1.php', $current_page) ?>" href="sales_leftovers_1.php"><i class="fas fa-recycle me-1"></i> بيع أول</a></li>
+                            <li class="nav-item"><a class="nav-link <?= navActive('sales_leftovers_2.php', $current_page) ?>" href="sales_leftovers_2.php"><i class="fas fa-history me-1"></i> بيع ثاني</a></li>
                         <?php endif; ?>
 
                         <?php if ($is_full): ?>

@@ -181,7 +181,7 @@ if ($reportType === 'Monthly') {
     <!-- Header Area -->
     <div class="report-header">
         <div class="header-right">
-            <div class="fw-bold fs-5">إدارة/ راوي أوجه أنواع القات</div>
+            <div class="fw-bold fs-5">إدارة/ القادري وماجد لأجود أنواع القات</div>
             <div>ت: 775065459 - 774456261</div>
         </div>
         <div class="header-center">

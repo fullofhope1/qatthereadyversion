@@ -73,7 +73,7 @@ $ref_data = $refStmt->fetchAll();
 // Combine and Sort
 $transactions = array_merge($sales_data, $pay_data, $ref_data);
 usort($transactions, function ($a, $b) {
-    return strtotime($b['t_date']) - strtotime($a['t_date']); // Latest first
+    return strtotime($a['t_date']) - strtotime($b['t_date']); // Oldest first
 });
 
 $business_name = "القادري و ماجد - لأجود أنواع القات";

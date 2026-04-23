@@ -18,11 +18,16 @@ class DailyCloseRepository extends BaseRepository
 
     public function getActiveManualLeftovers()
     {
-        // Identify ALL active leftovers to be trashed
-        $sql = "SELECT id, purchase_id, qat_type_id, weight_kg, quantity_units, unit_type, source_date 
+        // Identify ALL active leftovers to be transitioned or trashed
+        $sql = "SELECT id, purchase_id, qat_type_id, weight_kg, quantity_units, unit_type, source_date, status 
                 FROM leftovers 
-                WHERE status IN ('Transferred_Next_Day', 'Auto_Momsi')";
+                WHERE status IN ('Transferred_Next_Day', 'Auto_Momsi', 'Momsi_Day_1', 'Momsi_Day_2')";
         return $this->fetchAll($sql);
+    }
+
+    public function markAsMomsiDay2($id, $tomorrowDate)
+    {
+        return $this->execute("UPDATE leftovers SET status = 'Momsi_Day_2', sale_date = ? WHERE id = ?", [$tomorrowDate, $id]);
     }
 
     public function trashLeftover($leftoverId, $currentDate)
@@ -37,11 +42,17 @@ class DailyCloseRepository extends BaseRepository
         $surplusKg = 0;
         $surplusUnits = 0;
         if ($l['unit_type'] === 'weight') {
-            $sold = (float)$this->fetchColumn("SELECT SUM(weight_kg) FROM sales WHERE leftover_id = ?", [$leftoverId]) ?: 0;
-            $surplusKg = (float)$l['weight_kg'] - $sold;
+            $sold = (float)$this->fetchColumn(
+                "SELECT COALESCE(SUM(COALESCE(weight_kg, weight_grams/1000)), 0) FROM sales WHERE leftover_id = ? AND is_returned = 0",
+                [$leftoverId]
+            ) ?: 0;
+            $surplusKg = max(0, (float)$l['weight_kg'] - $sold);
         } else {
-            $sold = (int)$this->fetchColumn("SELECT SUM(quantity_units) FROM sales WHERE leftover_id = ?", [$leftoverId]) ?: 0;
-            $surplusUnits = (int)$l['quantity_units'] - $sold;
+            $sold = (int)$this->fetchColumn(
+                "SELECT COALESCE(SUM(quantity_units), 0) FROM sales WHERE leftover_id = ? AND is_returned = 0",
+                [$leftoverId]
+            ) ?: 0;
+            $surplusUnits = max(0, (int)$l['quantity_units'] - $sold);
         }
 
         if ($surplusKg > 0.001 || $surplusUnits > 0) {
@@ -64,8 +75,8 @@ class DailyCloseRepository extends BaseRepository
 
         if ($p['unit_type'] === 'weight') {
             $stmtW = $this->pdo->prepare("SELECT 
-                (SELECT SUM(weight_kg) FROM sales WHERE purchase_id = ?) as sold,
-                (SELECT SUM(weight_kg) FROM leftovers WHERE purchase_id = ? AND status IN ('Dropped', 'Transferred_Next_Day', 'Auto_Momsi')) as managed");
+                (SELECT SUM(COALESCE(weight_kg, weight_grams/1000)) FROM sales WHERE purchase_id = ?) as sold,
+                (SELECT SUM(weight_kg) FROM leftovers WHERE purchase_id = ? AND status IN ('Dropped', 'Transferred_Next_Day', 'Auto_Momsi', 'Momsi_Day_1', 'Momsi_Day_2')) as managed");
             $stmtW->execute([$purchaseId, $purchaseId]);
             $row = $stmtW->fetch();
             $surplus = (float)$p['quantity_kg'] - (float)($row['sold'] ?? 0) - (float)($row['managed'] ?? 0);
@@ -73,7 +84,7 @@ class DailyCloseRepository extends BaseRepository
         } else {
             $stmtU = $this->pdo->prepare("SELECT 
                 (SELECT SUM(quantity_units) FROM sales WHERE purchase_id = ?) as sold,
-                (SELECT SUM(quantity_units) FROM leftovers WHERE purchase_id = ? AND status IN ('Dropped', 'Transferred_Next_Day', 'Auto_Momsi')) as managed");
+                (SELECT SUM(quantity_units) FROM leftovers WHERE purchase_id = ? AND status IN ('Dropped', 'Transferred_Next_Day', 'Auto_Momsi', 'Momsi_Day_1', 'Momsi_Day_2')) as managed");
             $stmtU->execute([$purchaseId, $purchaseId]);
             $row = $stmtU->fetch();
             $surplusUnits = (int)$p['received_units'] - (int)($row['sold'] ?? 0) - (int)($row['managed'] ?? 0);
@@ -103,37 +114,52 @@ class DailyCloseRepository extends BaseRepository
     /**
      * STEP 2: Moving today's surplus Fresh stock.
      */
-    public function getDayFreshStock($currentDate)
+    public function getDayFreshStock($currentDate, $forceAll = false)
     {
-        $stmt = $this->pdo->prepare("SELECT id, qat_type_id, quantity_kg, received_units, unit_type, purchase_date FROM purchases 
-                                    WHERE purchase_date = ? AND status = 'Fresh'");
-        $stmt->execute([$currentDate]);
+        if ($forceAll) {
+            $stmt = $this->pdo->prepare("SELECT id, qat_type_id, quantity_kg, received_units, unit_type, purchase_date FROM purchases 
+                                        WHERE (status = 'Fresh' OR status IS NULL OR status = '')");
+            $stmt->execute();
+        } else {
+            $stmt = $this->pdo->prepare("SELECT id, qat_type_id, quantity_kg, received_units, unit_type, purchase_date FROM purchases 
+                                        WHERE (status = 'Fresh' OR status IS NULL OR status = '') AND purchase_date <= ?");
+            $stmt->execute([$currentDate]);
+        }
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
     public function getSoldAndManagedForPurchase($purchaseId)
     {
         $stmt = $this->pdo->prepare("SELECT 
-            (SELECT SUM(weight_kg) FROM sales WHERE purchase_id = ?) as sold_kg,
-            (SELECT SUM(weight_kg) FROM leftovers WHERE purchase_id = ? AND status IN ('Dropped', 'Transferred_Next_Day', 'Auto_Momsi')) as managed_kg,
-            (SELECT SUM(quantity_units) FROM sales WHERE purchase_id = ?) as sold_units,
-            (SELECT SUM(quantity_units) FROM leftovers WHERE purchase_id = ? AND status IN ('Dropped', 'Transferred_Next_Day', 'Auto_Momsi')) as managed_units");
+            (SELECT COALESCE(SUM(COALESCE(weight_kg, weight_grams/1000)), 0) FROM sales WHERE purchase_id = ? AND is_returned = 0) as sold_kg,
+            (SELECT COALESCE(SUM(weight_kg), 0) FROM leftovers WHERE purchase_id = ? AND status IN ('Dropped', 'Auto_Dropped', 'Transferred_Next_Day', 'Auto_Momsi', 'Momsi_Day_1', 'Momsi_Day_2', 'Closed')) as managed_kg,
+            (SELECT COALESCE(SUM(quantity_units), 0) FROM sales WHERE purchase_id = ? AND is_returned = 0) as sold_units,
+            (SELECT COALESCE(SUM(quantity_units), 0) FROM leftovers WHERE purchase_id = ? AND status IN ('Dropped', 'Auto_Dropped', 'Transferred_Next_Day', 'Auto_Momsi', 'Momsi_Day_1', 'Momsi_Day_2', 'Closed')) as managed_units");
         $stmt->execute([$purchaseId, $purchaseId, $purchaseId, $purchaseId]);
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
         return [
-            'sold_kg' => $row['sold_kg'] ?: 0,
-            'managed_kg' => $row['managed_kg'] ?: 0,
-            'sold_units' => $row['sold_units'] ?: 0,
-            'managed_units' => $row['managed_units'] ?: 0
+            'sold_kg'      => $row['sold_kg'] ?: 0,
+            'managed_kg'   => $row['managed_kg'] ?: 0,
+            'sold_units'   => $row['sold_units'] ?: 0,
+            'managed_units'=> $row['managed_units'] ?: 0
         ];
     }
 
-    public function moveStockToTomorrow($purchaseId, $surplusKg, $surplusUnits, $currentDate, $tomorrow)
+    public function moveStockToTomorrow($purchaseId, $typeId, $surplusKg, $surplusUnits, $unitType, $sourceDate, $saleDate)
     {
-        // 1. Create entry in leftovers table (This is now the ONLY record for next-day stock)
+        // 1. Create entry in leftovers table as Momsi_Day_1
         $sqlL = "INSERT INTO leftovers (source_date, purchase_id, qat_type_id, weight_kg, quantity_units, unit_type, status, decision_date, sale_date) 
-                 VALUES (?, ?, (SELECT qat_type_id FROM purchases WHERE id = ?), ?, ?, (SELECT unit_type FROM purchases WHERE id = ?), 'Auto_Momsi', ?, ?)";
-        $this->pdo->prepare($sqlL)->execute([$currentDate, $purchaseId, $purchaseId, $surplusKg, $surplusUnits, $purchaseId, $currentDate, $tomorrow]);
+                 VALUES (?, ?, ?, ?, ?, ?, 'Momsi_Day_1', ?, ?)";
+        $this->pdo->prepare($sqlL)->execute([
+            $sourceDate, 
+            $purchaseId, 
+            $typeId, 
+            $surplusKg, 
+            $surplusUnits, 
+            $unitType, 
+            $sourceDate, 
+            $saleDate
+        ]);
 
         // 2. Close original purchase
         $this->pdo->prepare("UPDATE purchases SET status = 'Closed' WHERE id = ?")->execute([$purchaseId]);
@@ -143,16 +169,23 @@ class DailyCloseRepository extends BaseRepository
      * STEP 3: Debt Rollover
      * Moves all unpaid Daily debts to Deferred (مؤجل) status and updates due_date.
      */
-    public function migrateDailyDebts($currentDate, $tomorrow)
+    public function migrateDailyDebts($currentDate, $tomorrow, $forceAll = false)
     {
-        $sql = "UPDATE sales
-                SET due_date = ?,
-                    debt_type = 'Deferred'
-                WHERE due_date <= ?
-                AND payment_method = 'Debt'
-                AND (debt_type = 'Daily' OR debt_type IS NULL OR debt_type = '')
-                AND is_paid = 0";
-        return $this->pdo->prepare($sql)->execute([$tomorrow, $currentDate]);
+        if ($forceAll) {
+            $sql = "UPDATE sales
+                    SET due_date = ?, debt_type = 'Deferred'
+                    WHERE payment_method = 'Debt'
+                    AND (debt_type = 'Daily' OR debt_type IS NULL OR debt_type = '')
+                    AND is_paid = 0";
+            return $this->pdo->prepare($sql)->execute([$tomorrow]);
+        } else {
+            $sql = "UPDATE sales
+                    SET due_date = ?, debt_type = 'Deferred'
+                    WHERE due_date <= ? AND payment_method = 'Debt'
+                    AND (debt_type = 'Daily' OR debt_type IS NULL OR debt_type = '')
+                    AND is_paid = 0";
+            return $this->pdo->prepare($sql)->execute([$tomorrow, $currentDate]);
+        }
     }
 
     public function closeLegacyMomsiPurchases()
@@ -165,5 +198,16 @@ class DailyCloseRepository extends BaseRepository
     public function closePurchase($purchaseId)
     {
         return $this->pdo->prepare("UPDATE purchases SET status = 'Closed' WHERE id = ?")->execute([$purchaseId]);
+    }
+
+    public function getActiveLeftoversForDate($date, $forceAll = false)
+    {
+        if ($forceAll) {
+            $sql = "SELECT * FROM leftovers WHERE status NOT IN ('Dropped', 'Closed', 'Auto_Dropped')";
+            return $this->fetchAll($sql);
+        } else {
+            $sql = "SELECT * FROM leftovers WHERE sale_date <= ? AND status NOT IN ('Dropped', 'Closed', 'Auto_Dropped')";
+            return $this->fetchAll($sql, [$date]);
+        }
     }
 }

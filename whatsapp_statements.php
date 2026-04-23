@@ -9,10 +9,14 @@ $service = new CommunicationService($commRepo);
 
 $customers = $service->getWhatsAppStatementsData();
 
-// Build the base URL for the customer statement
 $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
 $host = $_SERVER['HTTP_HOST'];
 $baseUrl = $protocol . '://' . $host . '/qat';
+
+// Load Professional Template Data
+$notifData = require 'config/notifications.php';
+$acc = $notifData['accounts'];
+$todayAr = date('Y-m-d');
 ?>
 
 <style>
@@ -103,13 +107,16 @@ $baseUrl = $protocol . '://' . $host . '/qat';
                                 <?php foreach ($customers as $c): ?>
                                     <?php
                                     $stmtUrl = $baseUrl . '/customer_statement.php?id=' . $c['id'];
-                                    $msgWithLink = rawurlencode(
-                                        "مرحباً *{$c['name']}*، 👋\n\n" .
-                                            "نود إحاطتكم بتفاصيل مديونيتكم لدى *القادري و ماجد*.\n\n" .
-                                            "💰 *دينك الإجمالي الحالي:* " . number_format($c['total_debt']) . " ريال يمني.\n\n" .
-                                            "📄 *كشف حسابك الكامل:*\n{$stmtUrl}\n\n" .
-                                            "يرجى التكرم بالسداد في أقرب وقت.\n*القادري و ماجد*"
-                                    );
+                                    
+                                    $msgRaw = "إشعار من {$notifData['company_name']} {$notifData['slogan']}: " . $todayAr . "\n";
+                                    $msgRaw .= "عليكم إجمالي مبلغ: " . number_format($c['total_debt']) . " ريال\n\n";
+                                    $msgRaw .= "ارقام حساباتنا:\n";
+                                    $msgRaw .= "جيب: " . $acc['jeeb'] . "\n";
+                                    $msgRaw .= "جوالي: " . $acc['jawwali'] . "\n";
+                                    $msgRaw .= "كريمي: " . $acc['kuraimi'] . "\n\n";
+                                    $msgRaw .= "📄 كشف حسابكم الكامل: " . $stmtUrl;
+                                    
+                                    $msgWithLink = rawurlencode($msgRaw);
                                     ?>
                                     <tr id="wa-row-<?= $c['id'] ?>">
                                         <td class="ps-4 fw-bold"><?= htmlspecialchars($c['name']) ?></td>
@@ -177,11 +184,8 @@ $baseUrl = $protocol . '://' . $host . '/qat';
                             <tbody>
                                 <?php foreach ($customers as $c): ?>
                                     <?php
-                                    $smsText = urlencode(
-                                        "القادري وماجد: " .
-                                            $c['name'] . " رصيدك " .
-                                            number_format($c['total_debt']) . " ريال. يرجى السداد"
-                                    );
+                                    $smsRaw = "إشعار من {$notifData['company_name']}: عليك مبلغ " . number_format($c['total_debt']) . " ريال. حساباتنا: جيب/جوالي " . $acc['jeeb'] . " كريمي " . $acc['kuraimi'];
+                                    $smsText = urlencode($smsRaw);
                                     $smsPhone = $c['phone'];
                                     ?>
                                     <tr id="sms-row-<?= $c['id'] ?>">

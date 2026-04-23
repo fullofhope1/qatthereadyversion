@@ -38,7 +38,7 @@ class LeftoverRepository extends BaseRepository
                 JOIN qat_types t ON l.qat_type_id = t.id 
                 LEFT JOIN purchases p ON l.purchase_id = p.id
                 LEFT JOIN providers prov ON p.provider_id = prov.id
-                WHERE l.status IN ('Transferred_Next_Day', 'Auto_Momsi')
+                WHERE l.status IN ('Transferred_Next_Day', 'Auto_Momsi', 'Momsi_Day_1', 'Momsi_Day_2')
                 ORDER BY l.source_date DESC, l.id DESC";
         return $this->fetchAll($sql);
     }
@@ -59,5 +59,25 @@ class LeftoverRepository extends BaseRepository
         $sql = "INSERT INTO leftovers (source_date, purchase_id, qat_type_id, weight_kg, unit_type, quantity_units, status, decision_date, sale_date, notes) 
                 VALUES (:source_date, :purchase_id, :qat_type_id, :weight_kg, :unit_type, :quantity_units, :status, :decision_date, :sale_date, :notes)";
         return $this->execute($sql, $data);
+    }
+
+    public function restoreInventory($id, $kg, $units)
+    {
+        $sql = "UPDATE leftovers SET weight_kg = weight_kg + ?, quantity_units = quantity_units + ? WHERE id = ?";
+        return $this->execute($sql, [$kg, $units, $id]);
+    }
+
+    /**
+     * FIX #16: Check if an active leftover already exists for this purchase today.
+     * Prevents creating duplicate leftover records from the same source.
+     */
+    public function getActiveTodayByPurchaseId($purchaseId)
+    {
+        $sql = "SELECT id FROM leftovers 
+                WHERE purchase_id = ? 
+                  AND source_date = CURDATE()
+                  AND status IN ('Transferred_Next_Day', 'Auto_Momsi', 'Momsi_Day_1', 'Momsi_Day_2')
+                LIMIT 1";
+        return $this->fetchOne($sql, [$purchaseId]);
     }
 }

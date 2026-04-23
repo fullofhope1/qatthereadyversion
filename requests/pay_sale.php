@@ -15,16 +15,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     try {
         $pdo->beginTransaction();
 
-        // 1. Get Sale Details
-        $stmt = $pdo->prepare("SELECT customer_id, price, paid_amount FROM sales WHERE id = ?");
+        // 1. Get Sale Details (include refund_amount for accurate remaining)
+        $stmt = $pdo->prepare("SELECT customer_id, price, paid_amount, COALESCE(refund_amount, 0) as refund_amount FROM sales WHERE id = ?");
         $stmt->execute([$sale_id]);
         $sale = $stmt->fetch();
 
         if ($sale && $sale['customer_id']) {
-            $customer_id = $sale['customer_id'];
-            $price = $sale['price'];
-            $already_paid = $sale['paid_amount'] ?? 0;
-            $remaining = $price - $already_paid;
+            $price         = $sale['price'];
+            $already_paid  = $sale['paid_amount'] ?? 0;
+            $refund_amount = $sale['refund_amount'] ?? 0;
+            // FIX #3: Remaining = price - already paid - refunds already applied
+            $remaining = $price - $already_paid - $refund_amount;
 
             // VALIDATION: Prevent Overpayment
             if ($amount > $remaining) {

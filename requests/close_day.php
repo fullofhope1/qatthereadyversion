@@ -8,12 +8,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $today = $_POST['date'] ?? date('Y-m-d');
 
     try {
-        require_once '../includes/auto_close.php';
-
-        // We explicitly trigger closing for the requested day, 
-        // bypassing the "already closed" check so that multiple
-        // closes on the same physical day forcefully clear out Momsi.
-        trigger_auto_closing($pdo, $today, true);
+        // We explicitly trigger a forceful "Shift Close" which immediately ages
+        // all active stock to the next stage, bypassing date comparisons.
+        // This is per user request to treat closing as an explicit action.
+        require_once '../includes/classes/DailyCloseRepository.php';
+        require_once '../includes/classes/DailyCloseService.php';
+        require_once '../includes/classes/DebtRepository.php';
+        
+        $repository = new DailyCloseRepository($pdo);
+        $debtRepo = new DebtRepository($pdo);
+        $service = new DailyCloseService($repository, $debtRepo);
+        $service->closeDay($today, true);
 
         header("Location: ../closing.php");
     } catch (Exception $e) {

@@ -9,7 +9,9 @@ $service = new StaffService($staffRepo);
 $user_id = $_SESSION['user_id'];
 $role    = $_SESSION['role'] ?? null;
 $subRole = $_SESSION['sub_role'] ?? 'full';
-$staffMembers = $service->getStaffList($user_id, $role, $subRole);
+
+$showInactive = isset($_GET['show_inactive']) && $_GET['show_inactive'] == 1;
+$staffMembers = $service->getStaffList($user_id, $role, $subRole, $showInactive);
 $allWithdrawals = $service->getTotalWithdrawals($user_id);
 ?>
 
@@ -68,8 +70,11 @@ $allWithdrawals = $service->getTotalWithdrawals($user_id);
     <!-- Staff List -->
     <div class="col-md-8">
         <div class="card shadow-sm">
-            <div class="card-header bg-secondary text-white">
+            <div class="card-header bg-secondary text-white d-flex justify-content-between align-items-center">
                 <h5 class="mb-0">قائمة الموظفين</h5>
+                <a href="?show_inactive=<?= $showInactive ? 0 : 1 ?>" class="btn btn-sm <?= $showInactive ? 'btn-light' : 'btn-outline-light' ?>">
+                    <?= $showInactive ? 'عرض النشطين فقط' : 'عرض الموظفين الملغى تنشيطهم' ?>
+                </a>
             </div>
             <div class="card-body">
                 <div class="table-responsive">
@@ -104,9 +109,31 @@ $allWithdrawals = $service->getTotalWithdrawals($user_id);
                                         <?php endif; ?>
                                     </td>
                                     <td>
-                                        <a href="staff_details.php?id=<?= $s['id'] ?>" class="btn btn-info btn-sm text-white" title="Details">
-                                            <i class="fas fa-eye"></i>
-                                        </a>
+                                        <div class="d-flex gap-1" style="justify-content: center;">
+                                            <a href="staff_details.php?id=<?= $s['id'] ?>" class="btn btn-info btn-sm text-white" title="تفاصيل">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                            <button type="button" class="btn btn-warning btn-sm" title="تعديل" 
+                                                onclick="editStaff(<?= $s['id'] ?>, '<?= htmlspecialchars(addslashes($s['name'])) ?>', '<?= htmlspecialchars(addslashes($s['role'])) ?>', '<?= htmlspecialchars(addslashes($s['phone'] ?? '')) ?>', <?= $s['daily_salary'] ?: 0 ?>, '<?= $s['withdrawal_limit'] !== null ? $s['withdrawal_limit'] : '' ?>')">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                            
+                                            <?php if ($s['is_active']): ?>
+                                                <form action="requests/deactivate_staff.php" method="POST" style="display:inline;" onsubmit="return confirm('هل أنت متأكد من إلغاء تنشيط هذا الموظف؟ لن يظهر في القائمة النشطة ولكن بياناته ستبقى محفوظة.');">
+                                                    <input type="hidden" name="id" value="<?= $s['id'] ?>">
+                                                    <button type="submit" class="btn btn-secondary btn-sm" title="إلغاء تنشيط">
+                                                        <i class="fas fa-user-slash"></i>
+                                                    </button>
+                                                </form>
+                                            <?php else: ?>
+                                                <form action="requests/deactivate_staff.php" method="POST" style="display:inline;" onsubmit="return confirm('هل تريد إعادة تنشيط هذا الموظف؟');">
+                                                    <input type="hidden" name="id" value="<?= $s['id'] ?>">
+                                                    <input type="hidden" name="activate" value="1">
+                                                    <button type="submit" class="btn btn-success btn-sm" title="إعادة تنشيط">
+                                                        <i class="fas fa-user-check"></i>
+                                                    </button>
+                                                <?php endif; ?>
+                                        </div>
                                     </td>
                                 </tr>
                             <?php endforeach; ?>
@@ -123,6 +150,48 @@ $allWithdrawals = $service->getTotalWithdrawals($user_id);
     <a href="reports.php?report_type=Daily" class="btn btn-outline-secondary">
         <i class="fas fa-file-invoice me-2"></i> عرض تقرير اليوم المفصل
     </a>
+</div>
+
+<!-- Edit Staff Modal -->
+<div class="modal fade" id="editStaffModal" tabindex="-1" aria-labelledby="editStaffModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content text-end">
+      <form action="requests/update_staff.php" method="POST">
+        <div class="modal-header d-flex justify-content-between align-items-center bg-warning">
+          <h5 class="modal-title m-0 w-100" id="editStaffModalLabel">تعديل بيانات الموظف</h5>
+          <button type="button" class="btn-close m-0" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+            <input type="hidden" name="id" id="edit_s_id">
+            <input type="hidden" name="return_url" value="../staff.php">
+            <div class="mb-3">
+                <label class="form-label">الاسم</label>
+                <input type="text" name="name" id="edit_s_name" class="form-control" required>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">الوظيفة</label>
+                <input type="text" name="role" id="edit_s_role" class="form-control">
+            </div>
+            <div class="mb-3">
+                <label class="form-label">رقم الهاتف</label>
+                <input type="tel" name="phone" id="edit_s_phone" class="form-control text-end" inputmode="numeric">
+            </div>
+            <div class="mb-3">
+                <label class="form-label">الراتب اليومي</label>
+                <input type="number" step="1" name="daily_salary" id="edit_s_salary" class="form-control" required inputmode="numeric">
+            </div>
+            <div class="mb-3">
+                <label class="form-label">سقف السحب</label>
+                <input type="number" step="1" name="withdrawal_limit" id="edit_s_limit" class="form-control" placeholder="اختياري" inputmode="numeric">
+            </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+          <button type="submit" class="btn btn-warning">حفظ التعديلات</button>
+        </div>
+      </form>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -166,6 +235,18 @@ $allWithdrawals = $service->getTotalWithdrawals($user_id);
     document.addEventListener('DOMContentLoaded', function() {
         setupFocusNavigation(['s_name', 's_role', 's_phone', 's_salary', 's_limit'], 'btn_save_staff');
     });
+
+    function editStaff(id, name, role, phone, salary, limit) {
+        document.getElementById('edit_s_id').value = id;
+        document.getElementById('edit_s_name').value = name;
+        document.getElementById('edit_s_role').value = role;
+        document.getElementById('edit_s_phone').value = phone;
+        document.getElementById('edit_s_salary').value = salary;
+        document.getElementById('edit_s_limit').value = limit;
+        
+        let editModal = new bootstrap.Modal(document.getElementById('editStaffModal'));
+        editModal.show();
+    }
 </script>
 
 <?php include 'includes/footer.php'; ?>

@@ -14,33 +14,46 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $service = new SaleService($repo, $purchaseRepo, $customerRepo, $leftoverRepo, $unitSalesService);
 
         $data = [
-            'sale_date' => $_POST['sale_date'],
-            'customer_id' => !empty($_POST['customer_id']) ? $_POST['customer_id'] : null,
-            'qat_type_id' => $_POST['qat_type_id'],
-            'unit_type' => $_POST['unit_type'] ?? 'weight',
-            'purchase_id' => !empty($_POST['purchase_id']) ? $_POST['purchase_id'] : null,
-            'leftover_id' => !empty($_POST['leftover_id']) ? $_POST['leftover_id'] : null,
-            'qat_status' => !empty($_POST['qat_status']) ? $_POST['qat_status'] : 'Tari',
-            'weight_grams' => (float)($_POST['weight_grams'] ?? 0),
-            'quantity_units' => (int)($_POST['quantity_units'] ?? 0),
-            'price' => (float)$_POST['price'],
-            'payment_method' => $_POST['payment_method'],
-            'transfer_sender' => !empty($_POST['transfer_sender']) ? $_POST['transfer_sender'] : null,
-            'transfer_receiver' => !empty($_POST['transfer_receiver']) ? $_POST['transfer_receiver'] : null,
-            'transfer_number' => !empty($_POST['transfer_number']) ? $_POST['transfer_number'] : null,
-            'transfer_company' => !empty($_POST['transfer_company']) ? $_POST['transfer_company'] : null,
-            'is_paid' => ($_POST['payment_method'] === 'Debt') ? 0 : 1,
-            'debt_type' => ($_POST['payment_method'] === 'Debt') ? (!empty($_POST['debt_type']) ? $_POST['debt_type'] : 'Daily') : null,
-            'notes' => !empty($_POST['notes']) ? $_POST['notes'] : ''
+            // FIX #5: Always use server-side date. Never trust POST for sale_date.
+            'sale_date'        => date('Y-m-d'),
+            'customer_id'      => !empty($_POST['customer_id']) ? (int)$_POST['customer_id'] : null,
+            'qat_type_id'      => (int)$_POST['qat_type_id'],
+            'unit_type'        => $_POST['unit_type'] ?? 'weight',
+            'purchase_id'      => !empty($_POST['purchase_id']) ? (int)$_POST['purchase_id'] : null,
+            'leftover_id'      => !empty($_POST['leftover_id']) ? (int)$_POST['leftover_id'] : null,
+            'qat_status'       => !empty($_POST['qat_status']) ? $_POST['qat_status'] : 'Tari',
+            'weight_grams'     => (float)($_POST['weight_grams'] ?? 0),
+            'quantity_units'   => (int)($_POST['quantity_units'] ?? 0),
+            'price'            => (float)$_POST['price'],
+            'payment_method'   => $_POST['payment_method'],
+            'transfer_sender'  => !empty($_POST['transfer_sender'])  ? $_POST['transfer_sender']  : null,
+            'transfer_receiver'=> !empty($_POST['transfer_receiver']) ? $_POST['transfer_receiver']: null,
+            'transfer_number'  => !empty($_POST['transfer_number'])  ? $_POST['transfer_number']  : null,
+            'transfer_company' => !empty($_POST['transfer_company'])  ? $_POST['transfer_company'] : null,
+            'is_paid'          => ($_POST['payment_method'] === 'Debt') ? 0 : 1,
+            'debt_type'        => ($_POST['payment_method'] === 'Debt') ? (!empty($_POST['debt_type']) ? $_POST['debt_type'] : 'Daily') : null,
+            'notes'            => !empty($_POST['notes']) ? $_POST['notes'] : ''
         ];
 
-        $service->processSale($data);
+        // FIX #12: Reject zero-price sales
+        if ($data['price'] <= 0) {
+            showErrorPage("سعر غير صالح", "لا يمكن إتمام البيع بسعر صفر أو أقل. يرجى إدخال السعر الصحيح.", "Price: " . $data['price']);
+            exit;
+        }
+
+        $saleId = $service->processSale($data);
 
         $source = !empty($_POST['source_page']) ? $_POST['source_page'] : '';
-        if ($data['leftover_id'] || $source === 'leftovers') {
-            header("Location: ../sales_leftovers.php?success=1");
+        if ($source === 'leftovers_1') {
+            header("Location: ../sales_leftovers_1.php?success=1&sale_id=" . $saleId);
+        } elseif ($source === 'leftovers_2') {
+            header("Location: ../sales_leftovers_2.php?success=1&sale_id=" . $saleId);
+        } elseif ($data['leftover_id'] || $source === 'leftovers') {
+            // Fallback if source wasn't explicitly 1 or 2
+            // Let's guess sales_leftovers_1.php
+            header("Location: ../sales_leftovers_1.php?success=1&sale_id=" . $saleId);
         } else {
-            header("Location: ../sales.php?success=1");
+            header("Location: ../sales.php?success=1&sale_id=" . $saleId);
         }
         exit;
     } catch (Exception $e) {

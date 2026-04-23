@@ -45,7 +45,14 @@ $momsi = $pdo->query($sqlMomsi)->fetchAll();
 $leftovers = array_merge($leftovers, $momsi);
 
 $totalWeight = 0;
-foreach ($leftovers as $l) $totalWeight += $l['weight_kg'];
+$totalUnits = 0;
+foreach ($leftovers as $l) {
+    if ($l['unit_type'] === 'weight') {
+        $totalWeight += $l['weight_kg'];
+    } else {
+        $totalUnits += $l['quantity_units'];
+    }
+}
 
 // 2. DATA FOR SALES TAB (Rebirth Sales)
 $selectedProvider = $_GET['provider_id'] ?? null;
@@ -94,9 +101,14 @@ if ($selectedProvider) {
 
 <?php if ($sub == 'Inventory'): ?>
     <div class="card shadow-sm border-0">
-        <div class="card-header bg-white py-3 d-flex justify-content-between">
+        <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
             <h5 class="mb-0 fw-bold"><i class="fas fa-warehouse me-2"></i> البضاعة المتبقية</h5>
-            <span class="badge bg-danger fs-6">الإجمالي: <?= number_format($totalWeight, 2) ?> كجم</span>
+            <div class="d-flex gap-2">
+                <span class="badge bg-danger fs-6">إجمالي الوزن: <?= number_format($totalWeight, 2) ?> كجم</span>
+                <?php if ($totalUnits > 0): ?>
+                    <span class="badge bg-success fs-6">إجمالي الوحدات: <?= $totalUnits ?></span>
+                <?php endif; ?>
+            </div>
         </div>
         <div class="card-body p-0">
             <!-- Search box (#27) -->
@@ -125,13 +137,28 @@ if ($selectedProvider) {
                                     </td>
                                     <td><?= htmlspecialchars($l['vendor_name'] ?? 'غير معروف') ?></td>
                                     <td><?= htmlspecialchars($l['type_name'] ?? 'غير معروف') ?></td>
-                                    <td class="fw-bold"><?= $l['weight_kg'] ?> كجم</td>
-                                    <td>
-                                        <?php if (isset($l['source_type']) && $l['source_type'] == 'closing'): ?>
-                                            <span class="badge bg-success-subtle text-success border border-success"><i class="fas fa-moon"></i> ممسية</span>
+                                    <td class="fw-bold">
+                                        <?php if ($l['unit_type'] === 'weight'): ?>
+                                            <?= number_format($l['weight_kg'], 2) ?> كجم
                                         <?php else: ?>
-                                            <span class="badge bg-primary-subtle text-primary border border-primary"><i class="fas fa-arrow-right"></i> اليوم التالي</span>
+                                            <?= $l['quantity_units'] ?> <?= htmlspecialchars($l['unit_type'] ?: 'وحدة') ?>
                                         <?php endif; ?>
+                                    </td>
+                                    <td>
+                                        <?php 
+                                        $s = $l['status'];
+                                        if ($s === 'Momsi_Day_1') {
+                                            echo '<span class="badge bg-success-subtle text-success border border-success"><i class="fas fa-star"></i> المبيعة الأولى</span>';
+                                        } elseif ($s === 'Momsi_Day_2') {
+                                            echo '<span class="badge bg-warning-subtle text-warning-emphasis border border-warning"><i class="fas fa-star-half-alt"></i> المبيعة الثانية</span>';
+                                        } elseif ($s === 'Auto_Dropped' || $s === 'Dropped' || $s === 'Reception_Loss') {
+                                            echo '<span class="badge bg-danger-subtle text-danger border border-danger"><i class="fas fa-times-circle"></i> تالف / فاقد</span>';
+                                        } elseif (isset($l['source_type']) && $l['source_type'] == 'closing') {
+                                            echo '<span class="badge bg-info-subtle text-info border border-info"><i class="fas fa-moon"></i> ممسية</span>';
+                                        } else {
+                                            echo '<span class="badge bg-primary-subtle text-primary border border-primary"><i class="fas fa-arrow-right"></i> ' . htmlspecialchars($s) . '</span>';
+                                        }
+                                        ?>
                                     </td>
                                     <td class="text-muted small"><?= htmlspecialchars($l['notes'] ?? '') ?></td>
                                 </tr>
@@ -216,7 +243,13 @@ if ($selectedProvider) {
                                             </td>
                                             <td class="fw-bold"><?= htmlspecialchars($s['cust_name'] ?? 'زبون طيار') ?></td>
                                             <td><span class="badge bg-info-subtle text-dark border"><?= htmlspecialchars($s['type_name']) ?></span></td>
-                                            <td class="text-center"><?= $s['weight_grams'] / 1000 ?> كجم</td>
+                                            <td class="text-center">
+                                                <?php if (($s['unit_type'] ?? 'weight') === 'weight'): ?>
+                                                    <?= ($s['weight_grams'] ?? 0) / 1000 ?> كجم
+                                                <?php else: ?>
+                                                    <?= (int)($s['quantity_units'] ?? 0) ?> <?= htmlspecialchars($s['unit_type']) ?>
+                                                <?php endif; ?>
+                                            </td>
                                             <td class="text-end fw-bold text-success"><?= number_format($s['price']) ?> ريال</td>
                                         </tr>
                                     <?php endforeach; ?>

@@ -15,6 +15,25 @@ class PurchaseRepository extends BaseRepository
 
     public function create(array $data)
     {
+        $defaults = [
+            'purchase_date' => date('Y-m-d'),
+            'provider_id' => null,
+            'qat_type_id' => null,
+            'source_weight_grams' => 0,
+            'quantity_kg' => 0,
+            'price_per_kilo' => 0,
+            'agreed_price' => 0,
+            'unit_type' => 'weight',
+            'source_units' => 0,
+            'price_per_unit' => 0,
+            'received_units' => 0,
+            'is_received' => 0,
+            'status' => 'Fresh',
+            'media_path' => null,
+            'created_by' => null
+        ];
+        $data = array_merge($defaults, $data);
+
         $sql = "INSERT INTO purchases (
             purchase_date, provider_id, qat_type_id, source_weight_grams, 
             quantity_kg, price_per_kilo, agreed_price, unit_type, source_units, 
@@ -24,7 +43,12 @@ class PurchaseRepository extends BaseRepository
             :quantity_kg, :price_per_kilo, :agreed_price, :unit_type, :source_units, 
             :price_per_unit, :received_units, :is_received, :status, :media_path, :created_by
         )";
-        return $this->execute($sql, $data);
+
+        $allowed = array_keys($defaults);
+        $filtered = array_intersect_key($data, array_flip($allowed));
+
+        $this->execute($sql, $filtered);
+        return (int)$this->getLastInsertId();
     }
 
     public function update($id, array $data)
@@ -105,5 +129,17 @@ class PurchaseRepository extends BaseRepository
         $sql = "INSERT INTO leftovers (source_date, purchase_id, qat_type_id, weight_kg, status, decision_date, sale_date) 
                 VALUES (?, ?, ?, ?, 'Reception_Loss', ?, ?)";
         return $this->execute($sql, [$date, $purchaseId, $typeId, $weight, $date, $date]);
+    }
+
+    public function applyDiscount($id, $amount)
+    {
+        $sql = "UPDATE purchases SET discount_amount = discount_amount + ? WHERE id = ?";
+        return $this->execute($sql, [$amount, $id]);
+    }
+
+    public function restoreInventory($id, $kg, $units)
+    {
+        $sql = "UPDATE purchases SET quantity_kg = quantity_kg + ?, received_units = received_units + ? WHERE id = ?";
+        return $this->execute($sql, [$kg, $units, $id]);
     }
 }

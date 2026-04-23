@@ -112,8 +112,14 @@
                                         <span class="text-success small">-</span>
                                     <?php endif; ?>
                                 </td>
-                                <td class="text-end fw-bold text-success pe-4">
-                                    <?= number_format($p['net_cost']) ?>
+                                <td class="text-end pe-4">
+                                    <?php if ($p['discount_amount'] > 0): ?>
+                                        <div class="small text-muted text-decoration-line-through"><?= number_format($p['net_cost']) ?></div>
+                                        <div class="text-danger small">-<?= number_format($p['discount_amount']) ?></div>
+                                        <div class="fw-bold text-success h6 mb-0"><?= number_format($p['final_cost']) ?></div>
+                                    <?php else: ?>
+                                        <div class="fw-bold text-success"><?= number_format($p['net_cost']) ?></div>
+                                    <?php endif; ?>
                                 </td>
                             </tr>
                         <?php endforeach; ?>

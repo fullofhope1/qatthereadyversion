@@ -67,11 +67,16 @@ if ($reportType === 'Monthly') {
 $reportRepo = new ReportRepository($pdo);
 $service = new ReportService($reportRepo);
 
-// Current user ID for filtering user-specific data (expenses, deposits)
-$current_user_id = $_SESSION['user_id'] ?? null;
+// User Context for Filtering:
+// Every user (Admin or Super Admin) sees ONLY their own data by default.
+// This ensures that personal expenses and operations are not merged.
+$report_user_id = $_SESSION['user_id'] ?? null;
+$isolated_user_id = $_SESSION['user_id'] ?? null;
 
 // --- CORE DATA FETCHING ---
-$overview = $service->getOverviewData($reportType, $date, $month, $year, $current_user_id);
+$overview = $service->getOverviewData($reportType, $date, $month, $year, $report_user_id);
+$grossSales = $overview['gross_sales'] ?? 0;
+$totalRefunds = $overview['total_refunds'] ?? 0;
 $totalSales = $overview['total_sales'];
 $totalPurchases = $overview['total_purchases'];
 $totalExpenses = $overview['total_expenses'];
@@ -82,14 +87,19 @@ $tomorrowDue = $overview['tomorrow_due'];
 $listRefunds = $overview['refunds'];
 
 // Tab-specific data
-$listSales = ($view === 'Sales' || $view === 'Printable') ? $service->getDetailedViewData('Sales', $reportType, $date, $month, $year, $provider_id, $current_user_id) : [];
-$listPurch = ($view === 'Receiving' || $view === 'Printable') ? $service->getDetailedViewData('Receiving', $reportType, $date, $month, $year, null, $current_user_id) : [];
-$listExp = ($view === 'Expenses' || $view === 'Printable') ? $service->getDetailedViewData('Expenses', $reportType, $date, $month, $year, null, $current_user_id) : [];
-$listWaste = ($view === 'Waste' || $view === 'Printable') ? $service->getDetailedViewData('Waste', $reportType, $date, $month, $year, null, $current_user_id) : [];
+$listSales = ($view === 'Sales' || $view === 'Printable') ? $service->getDetailedViewData('Sales', $reportType, $date, $month, $year, $provider_id, $report_user_id) : [];
+$listPurch = ($view === 'Receiving' || $view === 'Printable') ? $service->getDetailedViewData('Receiving', $reportType, $date, $month, $year, null, null) : [];
+$listExp = ($view === 'Expenses' || $view === 'Printable') ? $service->getDetailedViewData('Expenses', $reportType, $date, $month, $year, null, $report_user_id) : [];
+$listWaste = ($view === 'Waste' || $view === 'Printable') ? $service->getDetailedViewData('Waste', $reportType, $date, $month, $year, null, null) : [];
+$listStaff = ($view === 'Staff') ? $service->getDetailedViewData('Staff', $reportType, $date, $month, $year) : [];
+$listCust = ($view === 'Customers') ? $service->getDetailedViewData('Customers', $reportType, $date, $month, $year) : [];
+$listLO1 = ($view === 'Leftovers_1') ? $service->getDetailedViewData('Leftovers_1', $reportType, $date, $month, $year) : [];
+$listLO2 = ($view === 'Leftovers_2') ? $service->getDetailedViewData('Leftovers_2', $reportType, $date, $month, $year) : [];
+$listDamaged = ($view === 'Damaged') ? $service->getDetailedViewData('Damaged', $reportType, $date, $month, $year) : [];
 
 // --- SUMMARY & CASH CALCULATION ---
 if (in_array($view, ['Summary', 'Printable', 'Dashboard'])) {
-    $cashSummary = $service->getCashSummary($reportType, $date, $month, $year, $current_user_id);
+    $cashSummary = $service->getCashSummary($reportType, $date, $month, $year, $report_user_id);
     $remainingCash = $cashSummary['remaining_cash'];
     $cashSales = $cashSummary['cash_sales'];
     $collectedPayments = $cashSummary['collected_payments'];
@@ -227,26 +237,33 @@ if (in_array($view, ['Summary', 'Printable', 'Dashboard'])) {
                         </div>
                     </div>
 
-                    <ul class="nav nav-pills report-nav-pills d-none d-md-flex">
+                    <ul class="nav nav-pills report-nav-pills d-none d-md-flex flex-wrap">
                         <?php
+                        $isSuperAdmin = ($_SESSION['role'] ?? 'admin') === 'super_admin';
                         $tabs = [
-                            'Summary' => ['label' => 'الخلاصة الكلية', 'icon' => 'fa-file-invoice'],
-                            'Sales' => ['label' => 'المبيعات', 'icon' => 'fa-shopping-cart'],
-                            'Receiving' => ['label' => 'المشتريات', 'icon' => 'fa-truck'],
-                            'Waste' => ['label' => 'التوالف (البقايا)', 'icon' => 'fa-trash-alt'],
-                            'Expenses' => ['label' => 'المصاريف', 'icon' => 'fa-wallet'],
-                            'Refunds' => ['label' => 'المرتجعات', 'icon' => 'fa-undo'],
-                            'Debts' => ['label' => 'الديون', 'icon' => 'fa-file-invoice-dollar'],
-                            'unknown_transfers' => ['label' => 'حوالات مجهولة', 'icon' => 'fa-question-circle'],
-                            'Printable' => ['label' => 'التقرير المطبوع', 'icon' => 'fa-print'],
-                            'Dashboard' => ['label' => 'تحليل الأداء', 'icon' => 'fa-tachometer-alt'],
+                            'Summary' => ['label' => 'الخلاصة', 'icon' => 'fa-home', 'super_only' => false],
+                            'Sales' => ['label' => 'المبيعات', 'icon' => 'fa-shopping-cart', 'super_only' => false],
+                            'Receiving' => ['label' => 'المشتريات', 'icon' => 'fa-truck-loading', 'super_only' => false],
+                            'Expenses' => ['label' => 'المصاريف', 'icon' => 'fa-wallet', 'super_only' => false],
+                            'Staff' => ['label' => 'الموظفين', 'icon' => 'fa-user-tie', 'super_only' => false],
+                            'Customers' => ['label' => 'العملاء', 'icon' => 'fa-users', 'super_only' => false],
+                            'Leftovers_1' => ['label' => 'بقايا أول', 'icon' => 'fa-box', 'super_only' => false],
+                            'Leftovers_2' => ['label' => 'بقايا ثاني', 'icon' => 'fa-boxes', 'super_only' => false],
+                            'Damaged' => ['label' => 'التوالف', 'icon' => 'fa-trash-alt', 'super_only' => false],
+                            'Debts' => ['label' => 'الديون', 'icon' => 'fa-file-invoice-dollar', 'super_only' => false],
+                            'unknown_transfers' => ['label' => 'حوالات', 'icon' => 'fa-question-circle', 'super_only' => false],
+                            'Compensations' => ['label' => 'التعويضات', 'icon' => 'fa-hand-holding-usd', 'super_only' => true],
+                            'Returns' => ['label' => 'المرتجعات', 'icon' => 'fa-undo', 'super_only' => true],
+                            'Printable' => ['label' => 'طباعة', 'icon' => 'fa-print', 'super_only' => false],
+                            'Dashboard' => ['label' => 'التحليل', 'icon' => 'fa-chart-pie', 'super_only' => false],
                         ];
                         foreach ($tabs as $k => $v):
+                            if ($v['super_only'] && !$isSuperAdmin) continue;
                             $active = ($view === $k);
                         ?>
-                            <li class="nav-item me-2">
+                            <li class="nav-item me-1 mb-1">
                                 <a class="nav-link <?= $active ? 'active' : 'text-white' ?>" href="?view=<?= $k ?>&report_type=<?= $reportType ?>&date=<?= $date ?>&month=<?= $month ?>&year=<?= $year ?>">
-                                    <i class="fas <?= $v['icon'] ?> me-2"></i> <?= $v['label'] ?>
+                                    <i class="fas <?= $v['icon'] ?> me-1"></i> <?= $v['label'] ?>
                                 </a>
                             </li>
                         <?php endforeach; ?>
@@ -322,57 +339,51 @@ if (in_array($view, ['Summary', 'Printable', 'Dashboard'])) {
 <div class="container-fluid px-0">
     <?php
     $viewPath = "includes/reports/view_" . strtolower($view) . ".php";
-    if ($view === 'Refunds') {
+    if ($view === 'Compensations' || $view === 'Returns') {
+        $filteredList = array_filter($listRefunds, function($r) use ($view) {
+            $isReturn = ($r['weight_kg'] > 0 || $r['quantity_units'] > 0);
+            return ($view === 'Returns' ? $isReturn : !$isReturn);
+        });
     ?>
         <div class="card report-table-card shadow-sm border-0">
             <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
                 <h5 class="mb-0 fw-bold text-dark">
-                    <i class="fas fa-undo me-2 text-warning"></i>
-                    سجل المرتجعات التفصيلي
+                    <i class="fas <?= $view === 'Returns' ? 'fa-undo text-primary' : 'fa-hand-holding-usd text-warning' ?> me-2"></i>
+                    سجل <?= $view === 'Returns' ? 'المرتجعات' : 'التعويضات' ?> التفصيلي
                 </h5>
-                <span class="badge bg-light text-muted fw-normal"><?= count($listRefunds) ?> عملية</span>
+                <span class="badge bg-light text-muted fw-normal"><?= count($filteredList) ?> عملية</span>
             </div>
             <div class="card-body p-0">
-                <!-- Search box (#27) -->
                 <div class="p-3 pb-0">
-                    <input type="text" id="refundReportSearch" class="form-control" placeholder="بحث باسم العميل أو السبب..." oninput="filterRefundReport()">
+                    <input type="text" id="refundReportSearch" class="form-control" placeholder="بحث باسم العميل أو البيان..." oninput="filterRefundReport()">
                 </div>
                 <div class="table-responsive">
                     <table class="table table-hover mb-0 align-middle report-table">
                         <thead>
                             <tr>
-                                <th>العميل</th>
-                                <th>نوع المرتجع</th>
-                                <th>السبب (البيان)</th>
+                                <th>الزبون</th>
+                                <th>النوع</th>
+                                <?php if ($view === 'Returns'): ?><th>الكمية المسترجعة</th><?php endif; ?>
+                                <th>البيان (السبب)</th>
                                 <th class="text-end">المبلغ (ريال)</th>
                             </tr>
                         </thead>
                         <tbody>
-                            <?php foreach ($listRefunds as $r): ?>
+                            <?php foreach ($filteredList as $r): ?>
                                 <tr>
-                                    <td>
-                                        <div class="fw-bold"><?= htmlspecialchars($r['cust_name'] ?? 'عميل سفري') ?></div>
+                                    <td><div class="fw-bold"><?= htmlspecialchars($r['cust_name'] ?? 'عميل سفري') ?></div></td>
+                                    <td><span class="badge bg-light text-dark border"><?= htmlspecialchars($r['refund_type']) ?></span></td>
+                                    <?php if ($view === 'Returns'): ?>
+                                    <td class="small fw-bold text-primary">
+                                        <?= $r['weight_kg'] > 0 ? number_format($r['weight_kg'], 3).' كجم' : $r['quantity_units'].' حبة' ?>
                                     </td>
-                                    <td>
-                                        <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle">
-                                            <?= htmlspecialchars($r['refund_type']) ?>
-                                        </span>
-                                    </td>
-                                    <td class="text-muted small">
-                                        <?= htmlspecialchars($r['reason']) ?>
-                                    </td>
-                                    <td class="text-end fw-bold text-dark">
-                                        <?= number_format($r['amount']) ?>
-                                    </td>
+                                    <?php endif; ?>
+                                    <td class="text-muted small"><?= htmlspecialchars($r['reason']) ?></td>
+                                    <td class="text-end fw-bold text-dark"><?= number_format($r['amount']) ?></td>
                                 </tr>
                             <?php endforeach; ?>
-                            <?php if (empty($listRefunds)): ?>
-                                <tr>
-                                    <td colspan="4" class="text-center py-5 text-muted">
-                                        <i class="fas fa-history fs-1 d-block mb-3 opacity-25"></i>
-                                        لا توجد مرتجعات مسجلة في هذه الفترة.
-                                    </td>
-                                </tr>
+                            <?php if (empty($filteredList)): ?>
+                                <tr><td colspan="5" class="text-center py-5 text-muted">لا توجد سجلات.</td></tr>
                             <?php endif; ?>
                         </tbody>
                     </table>

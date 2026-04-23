@@ -68,43 +68,13 @@ try {
         throw new Exception("فشل في حفظ ملف النسخة الاحتياطية على الخادم (يُرجى التحقق من أذونات مجلد backups).");
     }
 
-    // 2. Prepare Email
-    $to = 'aiaiaiaihelp@gmail.com';
-    $subject = 'Database Backup - ' . date('Y-m-d H:i');
-    $message = "Attached is the latest database backup from " . $_SERVER['HTTP_HOST'];
     $filename = basename($backup_file);
-    $content = chunk_split(base64_encode($sqlDump));
 
-    // Boundary 
-    $boundary = md5(time());
-
-    // Headers
-    $headers = "From: QAT-ERP <system@qat-erp.local>\r\n";
-    $headers .= "MIME-Version: 1.0\r\n";
-    $headers .= "Content-Type: multipart/mixed; boundary=\"" . $boundary . "\"\r\n";
-
-    // Text part
-    $body = "--" . $boundary . "\r\n";
-    $body .= "Content-Type: text/plain; charset=\"UTF-8\"\r\n";
-    $body .= "Content-Transfer-Encoding: 7bit\r\n\r\n";
-    $body .= $message . "\r\n\r\n";
-
-    // Attachment part
-    $body .= "--" . $boundary . "\r\n";
-    $body .= "Content-Type: application/octet-stream; name=\"" . $filename . "\"\r\n";
-    $body .= "Content-Transfer-Encoding: base64\r\n";
-    $body .= "Content-Disposition: attachment; filename=\"" . $filename . "\"\r\n\r\n";
-    $body .= $content . "\r\n\r\n";
-    $body .= "--" . $boundary . "--";
-
-    // 3. Send via mail()
-    $mail_sent = @mail($to, $subject, $body, $headers);
-
-    if ($mail_sent) {
-        echo json_encode(['success' => true, 'message' => 'تم إنشاء النسخة وتنزيلها في المجلد، وتم إرسالها بنجاح إلى البريد الإلكتروني.']);
-    } else {
-        echo json_encode(['success' => true, 'message' => 'تم إنشاء النسخة بنجاح في مجلد /backups، ولكن فشل إرسال الإيميل.']);
-    }
+    echo json_encode([
+        'success' => true, 
+        'message' => 'تم إنشاء النسخة بنجاح في مجلد النسخ الاحتياطية.',
+        'filename' => $filename
+    ]);
 } catch (Exception $e) {
     echo json_encode(['success' => false, 'message' => $e->getMessage()]);
 }

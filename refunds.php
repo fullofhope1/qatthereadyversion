@@ -5,7 +5,11 @@ include 'includes/header.php';
 // Initialization via Clean Architecture
 $refundRepo = new RefundRepository($pdo);
 $customerRepo = new CustomerRepository($pdo);
-$service = new RefundService($refundRepo, $customerRepo);
+$saleRepo = new SaleRepository($pdo);
+$purchaseRepo = new PurchaseRepository($pdo);
+$leftoverRepo = new LeftoverRepository($pdo);
+
+$service = new RefundService($refundRepo, $customerRepo, $saleRepo, $purchaseRepo, $leftoverRepo);
 
 $data = $service->getRefundDashboardData();
 $customers = $data['customers'];
@@ -167,6 +171,7 @@ $custJson = json_encode($customers);
                             <div class="text-danger small mt-1" id="amountError"></div>
                         </div>
 
+                        <!-- Financial Operation Only -->
                         <label class="form-label fw-bold d-block mb-2"><i class="fas fa-list me-1 text-warning"></i> نوع العملية</label>
                         <div class="row g-3 mb-4">
                             <div class="col-6">
@@ -335,6 +340,55 @@ $custJson = json_encode($customers);
         document.getElementById('step1Next').disabled = false;
         selectedDebt = debt;
         selectedCustName = c.name;
+        
+        // Fetch customer sales
+        fetchCustomerSales(c.id);
+    }
+
+    let customerSales = [];
+    function fetchCustomerSales(custId) {
+        const select = document.getElementById('saleSelect');
+        select.innerHTML = '<option value="">-- جارِ التحميل... --</option>';
+        
+        fetch(`requests/get_customer_unpaid_sales.php?customer_id=${custId}`)
+            .then(res => res.json())
+            .then(data => {
+                select.innerHTML = '<option value="">-- اختر عملية بيع سابقة --</option>';
+                if (data.sales && data.sales.length > 0) {
+                    customerSales = data.sales;
+                    data.sales.forEach(s => {
+                        const opt = document.createElement('option');
+                        opt.value = s.id;
+                        opt.textContent = `${s.sale_date} | ${s.type_name} | المتبقي: ${Number(s.remaining_debt).toLocaleString()} ريال`;
+                        select.appendChild(opt);
+                    });
+                } else {
+                    select.innerHTML = '<option value="">-- لا توجد مبيعات غير مدفوعة --</option>';
+                }
+            });
+    }
+
+    function autoFillRefundFromSale() {
+        const saleId = document.getElementById('saleSelect').value;
+        const inputs = document.getElementById('inventoryInputs');
+        if (!saleId) {
+            inputs.style.display = 'none';
+            return;
+        }
+        
+        inputs.style.display = 'flex';
+        const sale = customerSales.find(s => s.id == saleId);
+        if (sale) {
+            document.getElementById('refundAmount').value = Math.floor(sale.remaining_debt);
+            // Default to 1 unit if units-based, or 0 kg if weight-based (user fills it)
+            if (sale.unit_type === 'units') {
+                document.getElementById('refundUnits').value = sale.quantity_units;
+                document.getElementById('refundWeight').value = 0;
+            } else {
+                document.getElementById('refundWeight').value = (sale.weight_grams / 1000).toFixed(3);
+                document.getElementById('refundUnits').value = 0;
+            }
+        }
     }
 
     function selectType(val) {

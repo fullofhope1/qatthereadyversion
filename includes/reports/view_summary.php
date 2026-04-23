@@ -23,15 +23,23 @@ $depositsUSD = $depositsRaw['USD'] ?? 0;
 $cashRefunds = 0;
 $debtRefunds = 0;
 foreach ($listRefunds as $r) {
-    if ($r['refund_type'] === 'Cash') $cashRefunds += $r['amount'];
+    if ($r['refund_type'] === 'Cash') {
+        $cashRefunds += $r['amount'];
+    } else {
+        $debtRefunds += $r['amount'];
+    }
 }
+$listTotalRefunds = $cashRefunds + $debtRefunds;
+// Use correct GROSS cash sales for inflow calculation (avoiding double deduction of cash refunds)
+$grossCashSales = $cashSummary['cash_sales'] ?? 0;
 $totalUnknownTransfers = (float)($salesSummary['total_unknown_transfers'] ?? 0);
-$totalInflow = $salesSummary['cash_sales'] + $collectedPayments + $totalUnknownTransfers;
+$totalInflow = $grossCashSales + $collectedPayments + $totalUnknownTransfers;
 $totalOutflow = $totalExpenses + $cashRefunds + $depositsYER;
 $remainingCash = $totalInflow - $totalOutflow;
 
-$totalDroppedKg  = ($leftoversSummary['manual_dropped_kg'] ?? 0) + ($leftoversSummary['auto_dropped_kg'] ?? 0);
-$totalMomsiKg    = ($leftoversSummary['manual_momsi_kg'] ?? 0) + ($leftoversSummary['auto_momsi_kg'] ?? 0);
+$totalDroppedKg  = ($leftoversSummary['total_dropped_kg'] ?? 0);
+$momsDay1Kg     = ($leftoversSummary['moms_day1_kg'] ?? 0);
+$momsDay2Kg     = ($leftoversSummary['moms_day2_kg'] ?? 0);
 ?>
 
 <style>
@@ -120,8 +128,16 @@ $totalMomsiKg    = ($leftoversSummary['manual_momsi_kg'] ?? 0) + ($leftoversSumm
                 <div class="icon-box bg-warning-subtle text-warning">
                     <i class="fas fa-shopping-basket"></i>
                 </div>
-                <h6 class="text-muted fw-bold text-uppercase small mb-3">ملخص المبيعات الكلي</h6>
+                <h6 class="text-muted fw-bold text-uppercase small mb-3">صافي المبيعات (Net Sales)</h6>
                 <div class="text-value text-dark"><?= number_format($totalSales) ?> <small class="fs-6 fw-normal">ريال</small></div>
+                <div class="small fw-bold text-muted mb-2">
+                    المبيعات الإجمالية: <span class="text-dark"><?= number_format($grossSales) ?></span>
+                </div>
+                <?php if ($totalRefunds > 0): ?>
+                <div class="small fw-bold text-danger mb-2" title="المرتجعات والتعويضات المخصومة">
+                    المرتجعات والتعويضات: -<?= number_format($totalRefunds) ?> <i class="fas fa-undo fs-xs"></i>
+                </div>
+                <?php endif; ?>
 
                 <div class="mt-4 pt-3 border-top">
                     <div class="d-flex justify-content-between mb-2 small">
@@ -159,8 +175,8 @@ $totalMomsiKg    = ($leftoversSummary['manual_momsi_kg'] ?? 0) + ($leftoversSumm
 
                 <div class="mt-4 pt-3 border-top">
                     <div class="d-flex justify-content-between mb-3">
-                        <span class="text-muted">المبيعات النقدية:</span>
-                        <span class="fw-bold"><?= number_format($salesSummary['cash_sales']) ?></span>
+                        <span class="text-muted">المبيعات النقدية (قبل المرتجع):</span>
+                        <span class="fw-bold"><?= number_format($grossCashSales) ?></span>
                     </div>
                     <div class="d-flex justify-content-between mb-3">
                         <span class="text-muted">سداد ديون قديمة:</span>
@@ -290,13 +306,18 @@ $totalMomsiKg    = ($leftoversSummary['manual_momsi_kg'] ?? 0) + ($leftoversSumm
                 </div>
                 <div class="mt-3 pt-3 border-top d-flex justify-content-around text-center">
                     <div>
-                        <div class="text-muted small">إجمالي التالف</div>
-                        <div class="h5 fw-bold text-danger mb-0"><?= number_format($totalDroppedKg, 2) ?> كجم</div>
+                        <div class="text-muted small">تالف (Dropped)</div>
+                        <div class="h5 fw-bold text-danger mb-0"><?= number_format($leftoversSummary['total_dropped_kg'] ?? 0, 2) ?> كجم</div>
                     </div>
                     <div class="vr"></div>
                     <div>
-                        <div class="text-muted small">إجمالي الممسي (المرحّل)</div>
-                        <div class="h5 fw-bold text-primary mb-0"><?= number_format($totalMomsiKg, 2) ?> كجم</div>
+                        <div class="text-muted small">المبيعة الأولى</div>
+                        <div class="h5 fw-bold text-primary mb-0"><?= number_format($leftoversSummary['moms_day1_kg'] ?? 0, 2) ?> كجم</div>
+                    </div>
+                    <div class="vr"></div>
+                    <div>
+                        <div class="text-muted small">المبيعة الثانية</div>
+                        <div class="h5 fw-bold text-warning mb-0"><?= number_format($leftoversSummary['moms_day2_kg'] ?? 0, 2) ?> كجم</div>
                     </div>
                 </div>
             </div>
@@ -304,26 +325,47 @@ $totalMomsiKg    = ($leftoversSummary['manual_momsi_kg'] ?? 0) + ($leftoversSumm
     </div>
 </div>
 
-<!-- Final Custody Result (The Performance Badge) -->
-<div class="row">
-    <div class="col-12">
-        <div class="card border-0 shadow-lg text-white p-5 overflow-hidden"
-            style="border-radius: 30px; background: <?= $remainingCash >= 0 ? 'var(--primary-gradient)' : 'linear-gradient(135deg, #eb3349 0%, #f45c43 100%)' ?>; animation: fadeInUp 1s ease-out; position: relative;">
+<!-- Net Profit & Final Result -->
+<div class="row g-4 mb-4">
+    <!-- Net Profit estimation -->
+    <div class="col-md-5">
+        <div class="card border-0 shadow-sm h-100" style="border-radius: 20px; background: #f8f9fa; border-right: 5px solid #20c997 !important;">
+            <div class="card-body p-4">
+                <h6 class="fw-bold mb-4 text-dark"><i class="fas fa-chart-line me-2 text-success"></i> صافي الربح التقديري</h6>
+                <?php
+                $netProfit = $totalSales - $totalPurchases - $totalExpenses;
+                ?>
+                <div class="text-center py-3">
+                    <div class="display-5 fw-bold <?= $netProfit >= 0 ? 'text-success' : 'text-danger' ?>">
+                        <?= number_format($netProfit) ?> <small class="fs-6 fw-normal">ريال</small>
+                    </div>
+                    <p class="text-muted small mt-2">
+                        * (صافي المبيعات - المشتريات - المصاريف)
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Final Custody Result -->
+    <div class="col-md-7">
+        <div class="card border-0 shadow-lg text-white p-5 h-100 overflow-hidden"
+            style="border-radius: 30px; background: <?= $remainingCash >= 0 ? 'var(--primary-gradient)' : 'linear-gradient(135deg, #eb3349 0%, #f45c43 100%)' ?>; position: relative;">
 
             <div style="position: absolute; top: -50px; right: -50px; width: 200px; height: 200px; background: rgba(255,255,255,0.1); border-radius: 50%;"></div>
 
             <div class="row align-items-center position-relative">
-                <div class="col-md-7 mb-4 mb-md-0">
-                    <div class="d-flex align-items-center mb-3">
+                <div class="col-12 mb-4">
+                    <div class="d-flex align-items-center mb-2">
                         <div class="bg-white bg-opacity-20 p-3 rounded-4 me-3">
                             <i class="fas fa-vault fs-2"></i>
                         </div>
-                        <h2 class="mb-0 fw-bold">العهدة النقدية النهائية</h2>
+                        <h2 class="mb-0 fw-bold fs-3">العهدة النقدية النهائية</h2>
                     </div>
-                    <p class="mb-0 opacity-75 fs-5">المستلم الفعلي المفترض تواجده حالياً مع المحاسب (بعد تصفية كافة العمليات)</p>
+                    <p class="mb-0 opacity-75 small">المستلم الفعلي المفترض تواجده حالياً مع المحاسب (بعد تصفية كافة العمليات)</p>
                 </div>
-                <div class="col-md-5 text-center text-md-end">
-                    <div class="display-3 fw-black mb-0" style="text-shadow: 0 10px 20px rgba(0,0,0,0.2);">
+                <div class="col-12 text-center text-md-end">
+                    <div class="display-3 fw-bold mb-0" style="text-shadow: 0 10px 20px rgba(0,0,0,0.2);">
                         <?= number_format($remainingCash) ?>
                     </div>
                     <div class="h4 fw-light opacity-75 mb-0">ريال يمني</div>

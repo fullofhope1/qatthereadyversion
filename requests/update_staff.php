@@ -13,11 +13,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'daily_salary' => $_POST['daily_salary'],
             'withdrawal_limit' => !empty($_POST['withdrawal_limit']) ? $_POST['withdrawal_limit'] : null
         ];
+        if (isset($_POST['name'])) $data['name'] = $_POST['name'];
+        if (isset($_POST['role'])) $data['role'] = $_POST['role'];
+        if (isset($_POST['phone'])) $data['phone'] = $_POST['phone'];
+
 
         $service->updateStaff($id, $data);
-        header("Location: ../staff_details.php?id=$id&success=1");
+        $returnUrl = $_POST['return_url'] ?? "../staff_details.php?id=$id";
+        $returnUrl .= (strpos($returnUrl, '?') !== false ? "&" : "?") . "success=1";
+        header("Location: $returnUrl");
     } catch (Exception $e) {
         $error = urlencode($e->getMessage());
-        header("Location: ../staff_details.php?id=$id&error=$error");
+        $returnUrl = $_POST['return_url'] ?? "../staff_details.php?id=$id";
+        $returnUrl .= (strpos($returnUrl, '?') !== false ? "&" : "?") . "error=$error";
+        header("Location: $returnUrl");
     }
 }
