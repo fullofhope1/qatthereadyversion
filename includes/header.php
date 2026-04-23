@@ -99,6 +99,8 @@ if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Animate.css -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
+    <!-- Driver.js for Interactive Tour -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/driver.js@1.0.1/dist/driver.css"/>
 
     <link rel="stylesheet" href="public/css/style.css">
     <style>
@@ -186,6 +188,43 @@ if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
 
         .premium-card:hover {
             transform: translateY(-5px);
+        }
+
+        /* Floating Help Button */
+        #help_trigger {
+            position: fixed;
+            bottom: 25px;
+            right: 25px;
+            width: 55px;
+            height: 55px;
+            background: var(--brand-gradient);
+            color: #000;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            cursor: pointer;
+            z-index: 9999;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            border: 2px solid #fff;
+        }
+
+        #help_trigger:hover {
+            transform: scale(1.1) rotate(15deg);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.4);
+        }
+
+        .driver-popover {
+            font-family: 'Cairo', sans-serif !important;
+            direction: rtl !important;
+            text-align: right !important;
+        }
+        .driver-popover-title {
+            color: var(--brand-dark) !important;
+            font-weight: 900 !important;
         }
     </style>
 </head>
