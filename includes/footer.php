@@ -2,7 +2,7 @@
 
 <!-- Floating Help Button -->
 <?php if (isset($_SESSION['user_id'])): ?>
-<a href="javascript:void(0)" id="help_trigger" title="دليل الاستخدام">
+<a href="javascript:void(0)" id="help_trigger" onclick="if(typeof startSiteTour === 'function') startSiteTour(); else alert('جاري تحميل نظام المساعدة... يرجى المحاولة بعد قليل');" title="دليل الاستخدام">
     <i class="fas fa-question"></i>
 </a>
 <?php endif; ?>
