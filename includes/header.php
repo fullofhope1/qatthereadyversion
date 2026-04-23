@@ -127,11 +127,25 @@ if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
 
         /* Mobile Fixes for Profile Dropdown */
         @media (max-width: 768px) {
+            .navbar-nav {
+                margin-top: 15px;
+            }
             .dropdown-menu-end {
-                left: 50% !important;
-                right: auto !important;
-                transform: translateX(-50%) !important;
-                min-width: 250px !important;
+                position: static !important; /* Let it flow in the navbar on mobile instead of floating out of bounds */
+                width: 100% !important;
+                border: none !important;
+                background: rgba(255, 255, 255, 0.05) !important;
+                box-shadow: none !important;
+                color: white !important;
+            }
+            .dropdown-item {
+                color: rgba(255, 255, 255, 0.8) !important;
+            }
+            .dropdown-item:hover {
+                background: rgba(255, 255, 255, 0.1) !important;
+            }
+            .dropdown-divider {
+                border-top: 1px solid rgba(255, 255, 255, 0.1) !important;
             }
         }
 
@@ -310,11 +324,11 @@ if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
                 <div class="d-flex align-items-center">
                     <?php if (isset($_SESSION['user_id'])): ?>
                         <div class="dropdown">
-                            <button class="btn btn-outline-light btn-sm dropdown-toggle d-flex align-items-center rounded-pill px-3" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <button class="btn btn-outline-light btn-sm dropdown-toggle d-flex align-items-center rounded-pill px-3" type="button" data-bs-toggle="dropdown" data-bs-auto-close="true" data-bs-display="static">
                                 <i class="fas fa-user-circle me-2 fs-5"></i>
-                                <span class="d-none d-md-inline"><?= htmlspecialchars($_SESSION['username']) ?></span>
+                                <span class="d-md-inline"><?= htmlspecialchars($_SESSION['username']) ?></span>
                             </button>
-                            <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0 mt-2" style="min-width:200px; right:0; left:auto;">
+                            <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0 mt-2">
                                 <li class="px-3 py-2 border-bottom mb-2">
                                     <span class="text-muted small">مرحباً، </span><br>
                                     <strong><?= htmlspecialchars($_SESSION['username']) ?></strong>

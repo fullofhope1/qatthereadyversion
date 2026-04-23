@@ -217,8 +217,12 @@ $allWithdrawals = $service->getTotalWithdrawals($user_id);
 
     // Contact Picker
     async function pickContact(fieldId) {
+        if (!window.isSecureContext) {
+            alert('عذراً، ميزة الوصول لجهات الاتصال تتطلب اتصالاً آمناً (HTTPS). يرجى التأكد من تشغيل الموقع عبر https:// للتمكن من استخدام هذه الميزة.');
+            return;
+        }
         if (!('contacts' in navigator && 'ContactsManager' in window)) {
-            alert('هذه الميزة مدعومة فقط في متصفحات الجوال الحديثة (Chrome/Android).');
+            alert('هذه الميزة مدعومة فقط في متصفحات الجوال الحديثة (Chrome/Android) وعبر اتصال آمن.');
             return;
         }
         try {

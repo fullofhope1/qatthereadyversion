@@ -97,7 +97,12 @@ $customers = $customerService->listCustomers();
                     </div>
                     <div class="mb-3">
                         <label class="form-label">الجوال <span class="text-danger">*</span></label>
-                        <input type="tel" class="form-control" name="phone" required pattern="[0-9]{7,15}" inputmode="numeric" placeholder="7xxxxxxxxx">
+                        <div class="input-group">
+                            <input type="tel" class="form-control text-end" name="phone" id="c_phone" required pattern="[0-9]{7,15}" inputmode="numeric" placeholder="7xxxxxxxxx">
+                            <button type="button" class="btn btn-warning" onclick="pickContact('c_phone')">
+                                <i class="fas fa-address-book"></i>
+                            </button>
+                        </div>
                         <div class="form-text">أدخل أرقاماً فقط</div>
                     </div>
                     <div class="mb-3">
@@ -135,6 +140,25 @@ $customers = $customerService->listCustomers();
                     rows[i].style.display = "none";
                 }
             }
+        }
+    }
+    async function pickContact(fieldId) {
+        if (!window.isSecureContext) {
+            alert('عذراً، ميزة الوصول لجهات الاتصال تتطلب اتصالاً آمناً (HTTPS). يرجى التأكد من تشغيل الموقع عبر https:// للتمكن من استخدام هذه الميزة.');
+            return;
+        }
+        if (!('contacts' in navigator && 'ContactsManager' in window)) {
+            alert('هذه الميزة مدعومة فقط في متصفحات الجوال الحديثة (Chrome/Android) وعبر اتصال آمن.');
+            return;
+        }
+        try {
+            const contacts = await navigator.contacts.select(['tel'], { multiple: false });
+            if (contacts && contacts.length > 0 && contacts[0].tel && contacts[0].tel.length > 0) {
+                let phone = contacts[0].tel[0].replace(/[^0-9+]/g, '');
+                document.getElementById(fieldId).value = phone;
+            }
+        } catch (e) {
+            console.log('Contact picker cancelled or failed', e);
         }
     }
 </script>
