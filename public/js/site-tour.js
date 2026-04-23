@@ -1,19 +1,37 @@
 // public/js/site-tour.js
 
-window.startSiteTour = function() {
-    console.log("Site Tour: startSiteTour called.");
-    
-    // 1. Initialize Driver if needed
-    const driverLib = (window.driver && window.driver.js && window.driver.js.driver) 
-                   || (window.driver && window.driver.driver)
-                   || window.driver;
+// Loud diagnostic as soon as script loads
+console.log("Site Tour: Script starting to load...");
 
-    if (typeof driverLib !== 'function') {
-        console.error("Driver.js library not found.");
-        alert("عذراً، مكتبة الشرح لم تتحمل بشكل كامل بعد. الرجاء تحديث الصفحة.");
+window.startSiteTour = function() {
+    console.log("Site Tour: Function startSiteTour triggered.");
+    
+    // 1. Get Site Config
+    const config = window.siteConfig || {};
+    console.log("Site Config Data:", config);
+
+    // 2. Locate Library
+    let driverLib;
+    try {
+        // Driver.js 1.0 IIFE exports to window.driver.js.driver
+        if (window.driver && window.driver.js && typeof window.driver.js.driver === 'function') {
+            driverLib = window.driver.js.driver;
+        } else if (window.driver && typeof window.driver.driver === 'function') {
+            driverLib = window.driver.driver;
+        } else if (typeof window.driver === 'function') {
+            driverLib = window.driver;
+        }
+    } catch(e) {
+        console.error("Site Tour: Library access error", e);
+    }
+
+    if (!driverLib) {
+        console.error("Site Tour: Driver.js not found in global scope.");
+        alert("تنبيه: مكتبة التوجيه التعليمي غير متوفرة حالياً. جرب تحديث الصفحة.");
         return;
     }
 
+    // 3. Initialize
     const driverObj = driverLib({
         showProgress: true,
         animate: true,
@@ -25,47 +43,52 @@ window.startSiteTour = function() {
         overlayOpacity: 0.75,
     });
 
-    // 2. Define Content
-    const config = window.siteConfig || {};
+    // 4. Content Mapping
     const tours = {
         "dashboard.php": {
-            super_admin: [
-                { element: ".bg-success", popover: { title: "مبيعات اليوم", description: "إجمالي المبيعات اليوم بعد الخصومات المرتجعة.", side: "bottom", align: "start" } },
-                { element: ".bg-danger", popover: { title: "إجمالي الديون", description: "ديون العملاء المتبقية حالياً.", side: "bottom", align: "start" } },
-                { element: "a[href='closing.php']", popover: { title: "إغلاق اليومية", description: "هام! اضغط هنا لإقفال حسابات اليوم وترحيلها.", side: "top", align: "start" } }
+            "super_admin": [
+                { element: ".bg-success", popover: { title: "مبيعات اليوم", description: "مجموع ما تم بيعه اليوم كاش وآجل.", side: "bottom" } },
+                { element: ".bg-danger", popover: { title: "إجمالي الديون", description: "ديون العملاء الإجمالية.", side: "bottom" } },
+                { element: "a[href='closing.php']", popover: { title: "إغلاق اليوم", description: "اضغط هنا في نهاية الدوام لتصفية الحسابات.", side: "top" } }
             ],
-            admin: [
-                { element: ".bg-warning", popover: { title: "مصاريف نوبتك", description: "المبالغ التي صرفتها في ورديتك الحالية.", side: "bottom", align: "start" } },
-                { element: "a[href='sourcing.php']", popover: { title: "التوريد", description: "ابدأ بإدخال الكميات الموردة من هنا.", side: "top", align: "start" } }
+            "admin": [
+                { element: ".bg-warning", popover: { title: "مصاريفك", description: "المبالغ التي قمت بصرفها.", side: "bottom" } },
+                { element: "a[href='sourcing.php']", popover: { title: "التوريد", description: "شاشة استلام القات من الموردين.", side: "top" } }
             ]
         },
         "sales.php": {
-            super_admin: [
-                { element: ".circle-btn", popover: { title: "بدء البيع", description: "اختر نوع القات للبدء بعملية بيع جديدة.", side: "bottom", align: "start" } },
-                { element: "#cSearch", popover: { title: "البحث عن عميل", description: "ابحث هنا لاختيار عميل موجود مسبقاً.", side: "top", align: "start" } }
+            "super_admin": [
+                { element: ".circle-btn", popover: { title: "بدء البيع", description: "اختر نوع القات للبدء.", side: "bottom" } },
+                { element: "#cSearch", popover: { title: "بحث الزبائن", description: "ابحث عن زبون دائم هنا.", side: "top" } }
             ]
         },
         "reports.php": {
-            super_admin: [
-                { element: "#repType", popover: { title: "تغيير التقرير", description: "اختر بين تقرير يومي أو شهري.", side: "bottom", align: "start" } },
-                { element: ".btn-update-report", popover: { title: "تحديث", description: "اضغط هنا لتطبيق الفلتر وتحديث البيانات.", side: "top", align: "start" } }
+            "super_admin": [
+                { element: "#repType", popover: { title: "نوع التقرير", description: "غيّر بين التقرير اليومي والشهري من هنا.", side: "bottom" } }
             ]
         }
     };
 
-    // 3. Match and Run
-    const pageTours = tours[config.page];
-    if (pageTours) {
-        const steps = pageTours[config.subRole] || pageTours[config.role];
+    // 5. Execution
+    const page = config.page || "";
+    const role = config.role || "";
+    const subRole = config.subRole || "";
+
+    console.log("Site Tour: Running for Page:", page, "Role:", role, "SubRole:", subRole);
+
+    const pageTour = tours[page];
+    if (pageTour) {
+        // Fallback logic: check subRole, then role
+        const steps = pageTour[subRole] || pageTour[role];
         if (steps && steps.length > 0) {
             driverObj.setSteps(steps);
             driverObj.drive();
         } else {
-            alert("لا يوجد شرح متوفر لصلاحياتك في هذه الصفحة.");
+            alert("لا تتوفر خطوات تعليمية لهذه الصفحة بصلاحياتك: " + role + "/" + subRole);
         }
     } else {
-        alert("لا يوجد شرح متوفر لهذه الصفحة حالياً.");
+        alert("نظام المساعدة لا يحتوي على شرح لهذه الصفحة: " + page);
     }
 };
 
-console.log("Site Tour: Script loaded and ready.");
+console.log("Site Tour: Script fully loaded.");
