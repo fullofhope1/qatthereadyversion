@@ -8,13 +8,13 @@ if ($is_localhost) {
     $servername = "localhost";
     $username = "root";
     $password = "";
-    $dbname = "qat_erp";
+    $dbname = "qat_erp"; // تأكد أن هذا هو اسم قاعدة البيانات في XAMPP لديك
 } else {
-    // Live Server Credentials
-    $servername = "sql100.hstn.me";
-    $username = "mseet_41427862";
-    $password = "zt92DPSWefgb";
-    $dbname = "mseet_41427862_qat_erp";
+    // Live Server Credentials (بيانات InfinityFree الجديدة)
+    $servername = "sql308.infinityfree.com";
+    $username = "if0_41735561";
+    $password = "DVf4IqRZf9Zh6";
+    $dbname = "if0_41735561_qat_db";
 }
 
 date_default_timezone_set('Asia/Aden');
@@ -25,5 +25,6 @@ try {
     $pdo->setAttribute(PDO::ATTR_EMULATE_PREPARES, false);
     $pdo->exec("SET time_zone = '+03:00'");
 } catch (PDOException $e) {
+    // نصيحة: في السيرفر الحي، يفضل عدم إظهار الخطأ بالتفصيل للمستخدم، لكن حالياً سنبقيها للتأكد من نجاح الاتصال
     die("Database Connection Failed: " . $e->getMessage());
 }
