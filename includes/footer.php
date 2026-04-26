@@ -84,7 +84,9 @@
                 data = JSON.parse(rawText);
             } catch (e) {
                 console.error("Parse Error from Backend:", rawText);
-                throw new Error("السيرفر لا يعيد بيانات JSON صالحة. هل رفعت ملف ai_config.php أم أن هناك خطأ برمجي؟");
+                throw new Error("السيرفر أرجع الخطأ البرمجي التالي:<br><br><div style='direction:ltr; text-align:left; background:#fff; padding:5px; border-radius:5px; font-family:monospace; color:red; overflow-x:auto;'>" + 
+                    rawText.replace(/</g, '&lt;').replace(/>/g, '&gt;') + 
+                    "</div>");
             }
             
             let replyHtml = '';
