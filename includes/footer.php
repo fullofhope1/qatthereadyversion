@@ -120,10 +120,11 @@
                 replyHtml = `<span style="color:red;">خطأ من جوجل: ${data.error.message}</span>`;
             } else if(data.candidates && data.candidates[0]) {
                 replyHtml = data.candidates[0].content.parts[0].text;
-                // Parse simple markdown
-                replyHtml = replyHtml.replace(/\\*\\*(.+?)\\*\\*/g, '<strong>$1</strong>');
-                replyHtml = replyHtml.replace(/\\*(.+?)\\*/g, '<em>$1</em>');
-                replyHtml = replyHtml.replace(/\\n/g, '<br>');
+                replyHtml = data.candidates[0].content.parts[0].text;
+                // Parse simple markdown properly
+                replyHtml = replyHtml.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+                replyHtml = replyHtml.replace(/\*(.*?)\*/g, '<em>$1</em>');
+                replyHtml = replyHtml.replace(/\n/g, '<br>');
             } else {
                 replyHtml = "لم أفهم السؤال، هل يمكنك التوضيح؟";
             }
