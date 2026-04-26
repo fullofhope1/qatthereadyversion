@@ -80,3 +80,21 @@ document.addEventListener('DOMContentLoaded', function () {
     initPasswordToggle();
     initKgConversion();
 });
+
+// Create a MutationObserver to watch for any dynamically added or re-rendered password inputs (Ensures eye icon never disappears)
+const observer = new MutationObserver(function(mutations) {
+    let shouldInit = false;
+    mutations.forEach(function(mutation) {
+        if (mutation.addedNodes.length > 0) {
+            shouldInit = true;
+        }
+    });
+    if (shouldInit) {
+        initPasswordToggle();
+    }
+});
+
+// Start observing the body for changes in the DOM
+if (document.body) {
+    observer.observe(document.body, { childList: true, subtree: true });
+}
