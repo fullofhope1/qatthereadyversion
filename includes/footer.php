@@ -86,6 +86,20 @@
             - التقارير (reports.php): 15 تبويبة مالية.
             - إغلاق اليومية (closing.php): نهاية كل يوم لتصفير الصندوق.`;
 
+            // Step 1: Dynamically find exactly which model this API key has access to!
+            let targetModel = 'gemini-1.5-flash';
+            try {
+                const modelReq = await fetch('https://generativelanguage.googleapis.com/v1beta/models?key=' + apiKey);
+                const modelData = await modelReq.json();
+                if (modelData && modelData.models) {
+                    const validModels = modelData.models.filter(m => m.supportedGenerationMethods.includes('generateContent') && m.name.includes('gemini'));
+                    if (validModels.length > 0) {
+                        targetModel = validModels[0].name.replace('models/', '');
+                    }
+                }
+            } catch (ignore) {}
+
+            // Step 2: Make the actual request using the dynamically found model
             const payload = {
                 contents: [
                     { role: "user", parts: [{ text: systemPrompt + " \\n\\nالسؤال: " + message }] }
@@ -93,7 +107,7 @@
                 generationConfig: { temperature: 0.2, maxOutputTokens: 500 }
             };
 
-            const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=' + apiKey, {
+            const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/' + targetModel + ':generateContent?key=' + apiKey, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
