@@ -21,39 +21,96 @@ window.startSiteTour = function() {
 
     const allPotentialTours = {
         "dashboard.php": [
-            { element: ".card.bg-success, .card.bg-primary", popover: { title: "مبيعات وإحصائيات", description: "هنا يظهر إجمالي المبيعات، الإيرادات، والمخزون المتاح.", position: "bottom" } },
-            { element: ".card.bg-danger", popover: { title: "الديون الإجمالية", description: "إجمالي ديون العملاء التي لم تُدفع بعد.", position: "bottom" } },
-            { element: "a[href='closing.php']", popover: { title: "إغلاق اليومية", description: "ضروري جداً لإقفال الحسابات آخر اليوم والبدء بيوم جديد.", position: "top" } }
+            { element: ".card.bg-success, .card.bg-success", popover: { title: "مبيعات اليوم", description: "هنا يظهر إجمالي المبيعات التي تمت هذا اليوم.", position: "bottom" } },
+            { element: ".card.bg-danger", popover: { title: "الديون الإجمالية", description: "إجمالي ديون العملاء وتراكمات الآجل التي لم تُدفع بعد.", position: "bottom" } },
+            { element: ".card.bg-warning", popover: { title: "مصاريف اليوم", description: "إجمالي ما تم سحبه كمصاريف تشغيلية أو شخصية.", position: "bottom" } },
+            { element: ".card.bg-primary", popover: { title: "المشتريات", description: "إجمالي قيمة القات المورد اليوم.", position: "bottom" } },
+            { element: "a[href='sales.php'].btn-lg", popover: { title: "إجراء سريع", description: "اختصار لفتح شاشة مبيعات جديدة مباشرة.", position: "top" } },
+            { element: "a[href='closing.php']", popover: { title: "إغلاق اليومية", description: "النقطة الأهم نهاية اليوم! لإقفال وتصفية الصندوق والترحيل للمحاسبة.", position: "top" } }
         ],
         "sales.php": [
-            { element: ".circle-btn", popover: { title: "متوفر للبيع", description: "اضغط على أي مورد أو نوع من القات المتاح لبدء إنشاء فاتورة بيع.", position: "bottom" } },
-            { element: "button[onclick*='showCustList'], button.btn-cust", popover: { title: "اختيار زبون", description: "اربط الفاتورة بزبون مسجل لسهولة متابعة ديونه ومرتجعاته.", position: "top" } },
-            { element: "button.btn-pay", popover: { title: "طريقة الدفع", description: "اختر نقداً، آجل (دين)، أو حوالة بنكية.", position: "top" } }
+            { element: "#summaryBar", popover: { title: "شريط الملخص", description: "شريط يتحدث مباشرة ليعكس اختياراتك أثناء تكوين الفاتورة.", position: "bottom" } },
+            { element: ".circle-btn", popover: { title: "أنواع القات المتوفرة", description: "اضغط على النوع لبدء خطوات الفاتورة.", position: "bottom" } },
+            { element: "button[onclick*='showCustList'], button.btn-cust", popover: { title: "تحديد الزبون", description: "اربط الفاتورة بزبون مسجل لديك أو اضف عميلاً جديداً.", position: "top" } },
+            { element: "button.btn-weight, #manualWeight", popover: { title: "تحديد الوزن", description: "اختر الأوزان المجهزة (ثمن، ربع) أو أدخلها يدوياً بالجرام.", position: "top" } },
+            { element: "button.btn-price, #manualPrice", popover: { title: "تحديد السعر", description: "حدد السعر المتفق عليه لهذا الوزن.", position: "top" } },
+            { element: "button.btn-pay", popover: { title: "إنهاء المبيعة", description: "اختر كيف سيدفع العميل (نقداً، آجل، أو بحوالة بنكية).", position: "top" } }
         ],
         "purchases.php": [
-            { element: "form", popover: { title: "استلام المشتريات", description: "قم بتسجيل الوزن الناقص/الصافي والسعر المتفق عليه لاستلام القات من المورد.", position: "bottom" } },
-            { element: ".table-responsive", popover: { title: "سجل المشتريات المستلمة", description: "الفواتير السابقة والحالية تظهر هنا بصورة مفصلة.", position: "top" } }
+            { element: "form", popover: { title: "استلام المشتريات", description: "هنا يتم وزن الصنف الواصل من المورد وإدخال سعره الصافي الذي يُعتمد في النظام.", position: "bottom" } },
+            { element: ".table-responsive", popover: { title: "سجل الاستلام", description: "يستعرض لك البضاعة التي استلمتها مسبقاً وتفاصيل كل شحنة.", position: "top" } }
         ],
         "expenses.php": [
-            { element: "#categorySelect", popover: { title: "نوع المنصرف", description: "حدد إذا كان منصرف تشغيلي، مسحوب موظف، أو مصروف آخر.", position: "bottom" } },
-            { element: "form button[type='submit']", popover: { title: "حفظ المصروف", description: "اعتماد الصرف. سيتم خصم المبلغ من الصندوق العام لليوم.", position: "top" } }
+            { element: "#categorySelect", popover: { title: "تصنيف المصروف", description: "هل هو مصروف تشغيلي (إيجار، عمال)، أم سحب لراتب موظف؟ تحديد النوع مهم للتقارير.", position: "bottom" } },
+            { element: "input[name='amount']", popover: { title: "المبلغ المطلـوب", description: "أدخل كمية الريالات المصروفة بدقة.", position: "bottom" } },
+            { element: "form button[type='submit']", popover: { title: "صرف", description: "المبلغ هنا سيُقتطع من صندوق الكاش اليومي بشكل مباشر.", position: "top" } },
+            { element: ".table-responsive", popover: { title: "مراجعة المصروفات", description: "أي مصروف تدخله بالغلط يظهر هنا ويمكن حذفه أو تعديله بيومه.", position: "top" } }
         ],
-        "reports.php": [
-            { element: ".report-nav-pills", popover: { title: "أقسام التقارير", description: "تنقل بين الخلاصة، تفاصيل المبيعات، المشتريات، المرتجعات، المصاريف وغيرها.", position: "bottom" } },
-            { element: ".filter-pill-container", popover: { title: "الفلاتر الزمنية", description: "اختر التقرير اليومي، الشهري، أو السنوي وحدد التاريخ لعرض النتائج.", position: "top" } },
-            { element: ".btn-update-report", popover: { title: "تحديث التقرير", description: "اضغط هنا لجلب التقرير وفقاً للفلاتر.", position: "top" } }
+        "reports.php_Summary": [
+            { element: ".report-nav-pills", popover: { title: "شريط التبويبات", description: "تبويبات التنقل العلوية تنقلك بين كافة أنواع التقارير.", position: "bottom" } },
+            { element: ".filter-pill-container", popover: { title: "الفلترة الزمنية", description: "تحديد النطاق الزمني وسنة التقرير.", position: "bottom" } },
+            { element: ".bg-dark.text-white", popover: { title: "صافي الصندوق", description: "هذا هو النقد الموجود في درج الكاشير الفعلي بعد خصم المصاريف.", position: "bottom" } },
+            { element: ".row.g-3 .col-md-3:nth-child(1)", popover: { title: "المبيعات والدخل", description: "إجمالي مجاميع المبيعات كقيمة نقدية وإجمالي ما تم استلامه.", position: "top" } }
+        ],
+        "reports.php_Sales": [
+            { element: ".report-nav-pills", popover: { title: "شريط التبويبات", description: "اختيار القسم الفرعي (تتواجد في تبويبة المبيعات حالياً).", position: "bottom" } },
+            { element: "select[name='provider_id']", popover: { title: "تصفية الموردين", description: "يمكنك عرض مبيعات قات ورد محدد فقط عبر هذا الفلتر.", position: "bottom" } },
+            { element: ".report-table-card", popover: { title: "سجل المبيعات", description: "كل بيعة تمت مع رقم واسم الزبون وطريقة دفعه واسم الرعوي للقات المُباع.", position: "top" } }
+        ],
+        "reports.php_Receiving": [
+            { element: ".report-nav-pills", popover: { title: "التبويبات", description: "أنت الآن في تبويب المشتريات.", position: "bottom" } },
+            { element: ".report-table-card", popover: { title: "القات المورد", description: "تفاصيل ما تم توريده بأسماء الرعية (الموردين) وأسعاره وكمياته.", position: "top" } }
+        ],
+        "reports.php_Expenses": [
+            { element: ".report-nav-pills", popover: { title: "التبويبات", description: "قسم المصاريف.", position: "bottom" } },
+            { element: ".report-table-card", popover: { title: "تفاصيل المصاريف", description: "تظهر المصروفات هنا مفصلة حسب الصنف (تشغيلية، رواتب، متفرقات).", position: "top" } }
+        ],
+        "reports.php_Debts": [
+            { element: ".report-table-card", popover: { title: "حركة المديونية", description: "يظهر هنا كل من دفع أو أخذ بالآجل.", position: "top" } }
+        ],
+        "reports.php_General": [
+            { element: ".report-nav-pills", popover: { title: "التنقل بين الأقسام", description: "انقر على أي قسم للانتقال لسجله التفصيلي المتعلق بهذه الصفحة.", position: "bottom" } },
+            { element: ".filter-pill-container", popover: { title: "فلاتر العرض الزمنية", description: "يسمح لك باستخراج تقرير خاص بيوم محدد، شهر، أو سنة كاملة.", position: "bottom" } },
+            { element: ".btn-update-report", popover: { title: "تطبيق الفرز", description: "بعد إعداد خياراتك، اضغط هنا لتنعكس التقارير بنسختها الجديدة.", position: "top" } },
+            { element: ".report-table-card, .table-responsive", popover: { title: "سجل البيانات", description: "البيانات التفصيلية لهذا القسم يتم عرضها هنا بالأسفل.", position: "top" } }
         ],
         "sourcing.php": [
-            { element: "form", popover: { title: "التوريد والشراء", description: "هنا يتم تأسيس توريد جديد لمورد وتسجيل التكلفة المبدئية قبل وصوله للمحل.", position: "bottom" } }
+            { element: "form", popover: { title: "تأسيس توريد/شراء", description: "يسجل المشرف هنا أسماء الرعية وتكلفة الشراء الأولية حتى قبل وصول البضاعة للمحل.", position: "bottom" } },
+            { element: ".table", popover: { title: "التوريدات المعلقة", description: "التوريدات التي تم اعتمادها بانتظار استلامها في الفرع تظهر هنا.", position: "top" } }
         ],
         "debts.php": [
-            { element: "#customerSelect", popover: { title: "اختيار العميل", description: "اختر العميل المديون لعرض أو تسديد دفعاته.", position: "bottom" } },
-            { element: ".table-responsive", popover: { title: "الديون المسجلة", description: "فواتير الديون تظهر هنا، مع أدوات السداد وكشوفات الحساب.", position: "top" } }
+            { element: "#customerSelect", popover: { title: "البحث عن عميل مديون", description: "اختر العميل لعرض إجمالي ديونه بالتفصيل.", position: "bottom" } },
+            { element: "form button[type='submit']", popover: { title: "تسديد دين", description: "أدخل المبلغ المستلم وسيتم تنزيله من رصيد العميل واحتسابه في الصندوق.", position: "top" } },
+            { element: ".table-responsive", popover: { title: "كشف حساب وتسديدات", description: "السجل لكافة المبالغ المسددة والمقيدة على العميل لمراجعتها.", position: "top" } }
+        ],
+        "customers.php": [
+            { element: "#customerForm", popover: { title: "إضافة عميل جديد", description: "الاحتفاظ ببيانات العملاء هنا يمكّنك من ربط فواتير الآجل بأسمائهم لاحقاً.", position: "bottom" } },
+            { element: ".table", popover: { title: "سجل العملاء الدائمين", description: "عرض لأرقام ومجاميع ديون كل العملاء، مع أزرار للسداد السريع.", position: "top" } }
+        ],
+        "staff.php": [
+            { element: "#staffForm", popover: { title: "بطاقة موظف", description: "قيد الموظفين هنا يسمح بربط مصاريفهم وسحبياتهم بحساباتهم مباشرة.", position: "bottom" } },
+            { element: ".table", popover: { title: "كشف العمال", description: "تفاصيل الرصيد لكل عامل وزر للتسديد أو عرض كشف مفصل لكافة مسحوباته.", position: "top" } }
         ]
     };
 
-    const page = config.page;
-    let rawSteps = allPotentialTours[page] || [];
+    let page = config.page;
+    let rawSteps = [];
+
+    // Dynamically handle views in reports.php
+    if (page === 'reports.php') {
+        const urlParams = new URLSearchParams(window.location.search);
+        let viewTab = urlParams.get('view') || 'Summary';
+        let customKey = "reports.php_" + viewTab;
+        
+        // If we have a custom tour for this specific tab, use it. Otherwise use General reports tour.
+        if (allPotentialTours[customKey]) {
+            rawSteps = allPotentialTours[customKey];
+        } else {
+            rawSteps = allPotentialTours["reports.php_General"];
+        }
+    } else {
+        rawSteps = allPotentialTours[page] || [];
+    }
 
     if (rawSteps.length > 0) {
         // CRITICAL: Filter steps to only include existing elements on the page
