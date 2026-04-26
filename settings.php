@@ -713,3 +713,5 @@ $is_full_admin = (isset($_SESSION['role']) && $_SESSION['role'] === 'super_admin
         window.addEventListener('DOMContentLoaded', initSettingsWhenReady);
     </script>
 <?php endif; ?>
+
+<?php include 'includes/footer.php'; ?>

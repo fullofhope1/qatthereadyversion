@@ -232,10 +232,25 @@
                                     <?php endif; ?>
                                 </td>
                                 <td class="text-center no-print">
+                                    <button class="btn btn-sm btn-outline-info rounded-circle mb-1" title="عرض تفاصيل الفاتورة" onclick='showInvoice(<?= htmlspecialchars(json_encode([
+                                        "id" => $s["id"],
+                                        "date" => date("Y-m-d H:i", strtotime($s["sale_date"])),
+                                        "customer" => $s["cust_name"] ?? "عميل سفري",
+                                        "provider" => $s["prov_name"] ?? "---",
+                                        "type" => $s["type_name"],
+                                        "qty" => $ut === "weight" ? ($netKg . " كجم") : ($netQty . " " . $ut),
+                                        "price" => number_format($s["price"]) . " ريال",
+                                        "payment_method" => $s["payment_method"],
+                                        "transfer_sender" => $s["transfer_sender"] ?? "",
+                                        "transfer_receiver" => $s["transfer_receiver"] ?? "",
+                                        "transfer_company" => $s["transfer_company"] ?? "",
+                                        "transfer_number" => $s["transfer_number"] ?? "",
+                                        "notes" => $s["notes"] ?? ""
+                                    ], JSON_UNESCAPED_UNICODE), ENT_QUOTES, "UTF-8") ?>)'>
+                                        <i class="fas fa-file-invoice"></i>
+                                    </button>
                                     <?php if ($s['is_returned']): ?>
-                                        <span class="badge bg-danger">مرتجع</span>
-                                    <?php else: ?>
-                                        <span class="text-muted">-</span>
+                                        <br><span class="badge bg-danger">مرتجع</span>
                                     <?php endif; ?>
                                 </td>
                             </tr>
@@ -306,5 +321,93 @@
             fbQty.innerHTML = qtyHtml;
             fbPrice.innerHTML = activePrice.toLocaleString('en-US') + ' ريال';
         }
+    }
+
+    function showInvoice(data) {
+        let modalHtml = `
+        <div class="modal fade" id="invoiceModal" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content border-0 rounded-4 shadow-lg">
+                    <div class="modal-header bg-dark text-white border-0 py-3">
+                        <h5 class="modal-title fw-bold"><i class="fas fa-file-invoice me-2 text-warning"></i> فاتورة مبيعات #${data.id}</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body p-4 bg-light">
+                        <div class="text-center mb-4 pb-3 border-bottom">
+                            <h4 class="fw-bold text-dark mb-1">القادري وماجد</h4>
+                            <div class="text-muted small">تاريخ الفاتورة: ${data.date}</div>
+                        </div>
+                        
+                        <div class="row g-3 mb-4">
+                            <div class="col-6">
+                                <div class="small text-muted fw-bold mb-1">العميل</div>
+                                <div class="fw-bold">${data.customer}</div>
+                            </div>
+                            <div class="col-6">
+                                <div class="small text-muted fw-bold mb-1">المورد (الرعوي)</div>
+                                <div class="fw-bold">${data.provider}</div>
+                            </div>
+                            <div class="col-6">
+                                <div class="small text-muted fw-bold mb-1">النوع / الكمية</div>
+                                <div class="fw-bold text-primary">${data.type} · ${data.qty}</div>
+                            </div>
+                            <div class="col-6">
+                                <div class="small text-muted fw-bold mb-1">السعر الإجمالي</div>
+                                <div class="fw-bold text-danger">${data.price}</div>
+                            </div>
+                        </div>`;
+
+        let methodAr = data.payment_method;
+        if(methodAr === 'Cash') methodAr = 'نقداً';
+        else if(methodAr === 'Debt') methodAr = 'آجل (دين)';
+        else if(methodAr === 'Internal Transfer' || methodAr === 'Transfer') methodAr = 'حوالة';
+
+        modalHtml += `
+                        <div class="card bg-white border-0 shadow-sm rounded-3 mb-3">
+                            <div class="card-body p-3">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <span class="fw-bold text-secondary">طريقة الدفع:</span>
+                                    <span class="badge bg-info-subtle text-info fs-6 px-3">${methodAr}</span>
+                                </div>`;
+
+        if (data.payment_method === 'Transfer' || data.payment_method === 'Internal Transfer') {
+            modalHtml += `
+                                <hr class="my-2">
+                                <div class="row g-2 small">
+                                    <div class="col-6"><span class="text-muted">المرسل:</span> <span class="fw-bold">${data.transfer_sender || '-'}</span></div>
+                                    <div class="col-6"><span class="text-muted">المستلم:</span> <span class="fw-bold">${data.transfer_receiver || '-'}</span></div>
+                                    <div class="col-6"><span class="text-muted">الشركة:</span> <span class="fw-bold">${data.transfer_company || '-'}</span></div>
+                                    <div class="col-6"><span class="text-muted">رقم الحوالة:</span> <span class="fw-bold text-primary">${data.transfer_number || '-'}</span></div>
+                                </div>`;
+        }
+
+        modalHtml += `      </div>
+                        </div>`;
+
+        if (data.notes) {
+            modalHtml += `
+                        <div class="bg-warning-subtle text-warning-emphasis p-3 rounded-3 small border border-warning-subtle">
+                            <strong>ملاحظات:</strong> ${data.notes}
+                        </div>`;
+        }
+
+        modalHtml += `
+                    </div>
+                    <div class="modal-footer border-0 p-3 bg-light justify-content-center">
+                        <button type="button" class="btn btn-dark rounded-pill px-5 fw-bold shadow-sm" data-bs-dismiss="modal">إغلاق</button>
+                    </div>
+                </div>
+            </div>
+        </div>`;
+
+        // remove old modal if exists
+        const oldModal = document.getElementById('invoiceModal');
+        if (oldModal) {
+            oldModal.remove();
+        }
+
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+        const modal = new bootstrap.Modal(document.getElementById('invoiceModal'));
+        modal.show();
     }
 </script>

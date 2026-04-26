@@ -1,94 +1,85 @@
 // public/js/site-tour.js
 
-// Loud diagnostic as soon as script loads
-console.log("Site Tour: Script starting to load...");
+console.log("Site Tour: Initializing...");
 
 window.startSiteTour = function() {
-    console.log("Site Tour: Function startSiteTour triggered.");
-    
-    // 1. Get Site Config
     const config = window.siteConfig || {};
-    console.log("Site Config Data:", config);
-
-    // 2. Locate Library
-    let driverLib;
-    try {
-        // Driver.js 1.0 IIFE exports to window.driver.js.driver
-        if (window.driver && window.driver.js && typeof window.driver.js.driver === 'function') {
-            driverLib = window.driver.js.driver;
-        } else if (window.driver && typeof window.driver.driver === 'function') {
-            driverLib = window.driver.driver;
-        } else if (typeof window.driver === 'function') {
-            driverLib = window.driver;
-        }
-    } catch(e) {
-        console.error("Site Tour: Library access error", e);
-    }
-
-    if (!driverLib) {
-        console.error("Site Tour: Driver.js not found in global scope.");
-        alert("تنبيه: مكتبة التوجيه التعليمي غير متوفرة حالياً. جرب تحديث الصفحة.");
+    
+    if (typeof Driver === 'undefined') {
+        alert("مكتبة الشرح غير جاهزة بعد، يرجى الانتظار ثانية.");
         return;
     }
 
-    // 3. Initialize
-    const driverObj = driverLib({
-        showProgress: true,
-        animate: true,
-        doneBtnText: "انتهى",
-        nextBtnText: "التالي",
-        prevBtnText: "السابق",
-        progressText: "{{current}} من {{total}}",
+    const driver = new Driver({
         allowClose: true,
         overlayOpacity: 0.75,
+        doneBtnText: 'انتهى',
+        closeBtnText: 'إغلاق',
+        nextBtnText: 'التالي',
+        prevBtnText: 'السابق',
     });
 
-    // 4. Content Mapping
-    const tours = {
-        "dashboard.php": {
-            "super_admin": [
-                { element: ".bg-success", popover: { title: "مبيعات اليوم", description: "مجموع ما تم بيعه اليوم كاش وآجل.", side: "bottom" } },
-                { element: ".bg-danger", popover: { title: "إجمالي الديون", description: "ديون العملاء الإجمالية.", side: "bottom" } },
-                { element: "a[href='closing.php']", popover: { title: "إغلاق اليوم", description: "اضغط هنا في نهاية الدوام لتصفية الحسابات.", side: "top" } }
-            ],
-            "admin": [
-                { element: ".bg-warning", popover: { title: "مصاريفك", description: "المبالغ التي قمت بصرفها.", side: "bottom" } },
-                { element: "a[href='sourcing.php']", popover: { title: "التوريد", description: "شاشة استلام القات من الموردين.", side: "top" } }
-            ]
-        },
-        "sales.php": {
-            "super_admin": [
-                { element: ".circle-btn", popover: { title: "بدء البيع", description: "اختر نوع القات للبدء.", side: "bottom" } },
-                { element: "#cSearch", popover: { title: "بحث الزبائن", description: "ابحث عن زبون دائم هنا.", side: "top" } }
-            ]
-        },
-        "reports.php": {
-            "super_admin": [
-                { element: "#repType", popover: { title: "نوع التقرير", description: "غيّر بين التقرير اليومي والشهري من هنا.", side: "bottom" } }
-            ]
-        }
+    const allPotentialTours = {
+        "dashboard.php": [
+            { element: ".card.bg-success, .card.bg-primary", popover: { title: "مبيعات وإحصائيات", description: "هنا يظهر إجمالي المبيعات، الإيرادات، والمخزون المتاح.", position: "bottom" } },
+            { element: ".card.bg-danger", popover: { title: "الديون الإجمالية", description: "إجمالي ديون العملاء التي لم تُدفع بعد.", position: "bottom" } },
+            { element: "a[href='closing.php']", popover: { title: "إغلاق اليومية", description: "ضروري جداً لإقفال الحسابات آخر اليوم والبدء بيوم جديد.", position: "top" } }
+        ],
+        "sales.php": [
+            { element: ".circle-btn", popover: { title: "متوفر للبيع", description: "اضغط على أي مورد أو نوع من القات المتاح لبدء إنشاء فاتورة بيع.", position: "bottom" } },
+            { element: "button[data-bs-target='#custListModal']", popover: { title: "اختيار زبون", description: "اربط الفاتورة بزبون مسجل لسهولة متابعة ديونه ومرتجعاته.", position: "top" } },
+            { element: "#payment_method", popover: { title: "طريقة الدفع", description: "اختر نقداً، آجل (دين)، أو حوالة بنكية.", position: "top" } },
+            { element: "#salesForm button[type='submit']", popover: { title: "اعتماد البيع", description: "بعد إدخال السعر والكمية، اضغط هنا لحفظ الفاتورة مباشرة.", position: "top" } }
+        ],
+        "purchases.php": [
+            { element: "#sourcingForm, form", popover: { title: "استلام المشتريات", description: "قم بتسجيل الوزن الناقص/الصافي والسعر المتفق عليه لاستلام القات من المورد.", position: "bottom" } },
+            { element: ".table-responsive", popover: { title: "سجل المشتريات المستلمة", description: "الفواتير السابقة والحالية تظهر هنا بصورة مفصلة.", position: "top" } }
+        ],
+        "expenses.php": [
+            { element: "#categorySelect", popover: { title: "نوع المنصرف", description: "حدد إذا كان منصرف تشغيلي، مسحوب موظف، أو مصروف آخر.", position: "bottom" } },
+            { element: "form button[type='submit']", popover: { title: "حفظ المصروف", description: "اعتماد الصرف. سيتم خصم المبلغ من الصندوق العام لليوم.", position: "top" } }
+        ],
+        "reports.php": [
+            { element: ".report-nav-pills", popover: { title: "أقسام التقارير", description: "تنقل بين الخلاصة، تفاصيل المبيعات، المشتريات، المرتجعات، المصاريف وغيرها.", position: "bottom" } },
+            { element: ".filter-pill-container", popover: { title: "الفلاتر الزمنية", description: "اختر التقرير اليومي، الشهري، أو السنوي وحدد التاريخ لعرض النتائج.", position: "top" } },
+            { element: ".btn-update-report", popover: { title: "تحديث التقرير", description: "اضغط هنا لجلب التقرير وفقاً للفلاتر.", position: "top" } }
+        ],
+        "sourcing.php": [
+            { element: "form", popover: { title: "التوريد والشراء", description: "هنا يتم تأسيس توريد جديد لمورد وتسجيل التكلفة المبدئية قبل وصوله للمحل.", position: "bottom" } }
+        ],
+        "debts.php": [
+            { element: "#customerSelect", popover: { title: "اختيار العميل", description: "اختر العميل المديون لعرض أو تسديد دفعاته.", position: "bottom" } },
+            { element: ".table-responsive", popover: { title: "الديون المسجلة", description: "فواتير الديون تظهر هنا، مع أدوات السداد وكشوفات الحساب.", position: "top" } }
+        ]
     };
 
-    // 5. Execution
-    const page = config.page || "";
-    const role = config.role || "";
-    const subRole = config.subRole || "";
+    const page = config.page;
+    let rawSteps = allPotentialTours[page] || [];
 
-    console.log("Site Tour: Running for Page:", page, "Role:", role, "SubRole:", subRole);
+    if (rawSteps.length > 0) {
+        // CRITICAL: Filter steps to only include existing elements on the page
+        const validSteps = rawSteps.filter(s => {
+            // Split up multiple selectors if we use commas e.g., ".card.bg-success, .card.bg-primary"
+            const selectors = s.element.split(',').map(sel => sel.trim());
+            for (let sel of selectors) {
+                const el = document.querySelector(sel);
+                if (el) {
+                    s.element = sel; // use the first matching one
+                    return true;
+                }
+            }
+            console.warn("Site Tour: Element not found, skipping:", s.element);
+            return false;
+        });
 
-    const pageTour = tours[page];
-    if (pageTour) {
-        // Fallback logic: check subRole, then role
-        const steps = pageTour[subRole] || pageTour[role];
-        if (steps && steps.length > 0) {
-            driverObj.setSteps(steps);
-            driverObj.drive();
+        if (validSteps.length > 0) {
+            console.log("Site Tour: Starting with", validSteps.length, "valid steps.");
+            driver.defineSteps(validSteps);
+            driver.start();
         } else {
-            alert("لا تتوفر خطوات تعليمية لهذه الصفحة بصلاحياتك: " + role + "/" + subRole);
+            alert("لا توجد عناصر واضحة للشرح في هذه الصفحة حالياً.");
         }
     } else {
-        alert("نظام المساعدة لا يحتوي على شرح لهذه الصفحة: " + page);
+        alert("لا توجد جولة تعليمية مخصصة لهذه الصفحة بعد.");
     }
 };
-
-console.log("Site Tour: Script fully loaded.");

@@ -8,7 +8,7 @@
 <?php endif; ?>
 
 <!-- Libraries -->
-<script src="https://cdn.jsdelivr.net/npm/driver.js@1.0.1/dist/driver.js.iife.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/driver.js@0.9.8/dist/driver.min.js"></script>
 
 <!-- Global Site Data for Tour -->
 <script>

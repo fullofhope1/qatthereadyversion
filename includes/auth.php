@@ -48,10 +48,10 @@ function checkPermission()
 
     $permissions = [
         'reports' => ['reports.php', 'admin_report.php', 'unknown_transfers.php'],
-        'sales_debts' => ['sales.php', 'customers.php', 'debts.php', 'sales_leftovers.php', 'customer_details.php', 'customer_statement.php', 'expenses.php', 'leftovers.php'],
+        'sales_debts' => ['sales.php', 'customers.php', 'debts.php', 'sales_leftovers_1.php', 'sales_leftovers_2.php', 'customer_details.php', 'customer_statement.php', 'expenses.php'],
         'receiving' => ['purchases.php', 'sourcing.php', 'inventory.php', 'dashboard.php', 'expenses.php'],
         // New specific roles
-        'seller' => ['sales.php', 'customers.php', 'debts.php', 'staff.php', 'expenses.php', 'sales_leftovers.php', 'customer_details.php', 'customer_statement.php'],
+        'seller' => ['sales.php', 'customers.php', 'debts.php', 'staff.php', 'staff_details.php', 'expenses.php', 'sales_leftovers_1.php', 'sales_leftovers_2.php', 'customer_details.php', 'customer_statement.php'],
         'accountant' => ['whatsapp_statements.php', 'reports.php', 'admin_report.php'],
         'partner' => ['reports.php', 'admin_report.php'],
         'verifier' => ['purchases.php', 'sourcing.php', 'inventory.php', 'providers.php', 'dashboard.php']

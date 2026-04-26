@@ -100,7 +100,7 @@ if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
     <!-- Animate.css -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
     <!-- Driver.js for Interactive Tour -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/driver.js@1.0.1/dist/driver.css"/>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/driver.js@0.9.8/dist/driver.min.css">
 
     <link rel="stylesheet" href="public/css/style.css">
     <style>
@@ -221,10 +221,20 @@ if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
             font-family: 'Cairo', sans-serif !important;
             direction: rtl !important;
             text-align: right !important;
+            z-index: 1000000000 !important;
         }
         .driver-popover-title {
             color: var(--brand-dark) !important;
             font-weight: 900 !important;
+        }
+        .driver-stage-no-animation {
+            z-index: 999999998 !important;
+        }
+        #driver-page-overlay {
+            z-index: 999999997 !important;
+        }
+        .driver-highlighted-element {
+            z-index: 999999999 !important;
         }
     </style>
 </head>
