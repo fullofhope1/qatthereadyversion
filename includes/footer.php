@@ -20,7 +20,7 @@
 </script>
 
 <script src="public/js/site-tour.js?v=<?= time() ?>"></script>
-<script src="public/js/main.js"></script>
+<script src="public/js/main.js?v=<?= time() ?>"></script>
 </body>
 
 </html>

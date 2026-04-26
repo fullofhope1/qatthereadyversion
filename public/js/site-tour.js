@@ -27,12 +27,11 @@ window.startSiteTour = function() {
         ],
         "sales.php": [
             { element: ".circle-btn", popover: { title: "متوفر للبيع", description: "اضغط على أي مورد أو نوع من القات المتاح لبدء إنشاء فاتورة بيع.", position: "bottom" } },
-            { element: "button[data-bs-target='#custListModal']", popover: { title: "اختيار زبون", description: "اربط الفاتورة بزبون مسجل لسهولة متابعة ديونه ومرتجعاته.", position: "top" } },
-            { element: "#payment_method", popover: { title: "طريقة الدفع", description: "اختر نقداً، آجل (دين)، أو حوالة بنكية.", position: "top" } },
-            { element: "#salesForm button[type='submit']", popover: { title: "اعتماد البيع", description: "بعد إدخال السعر والكمية، اضغط هنا لحفظ الفاتورة مباشرة.", position: "top" } }
+            { element: "button[onclick*='showCustList'], button.btn-cust", popover: { title: "اختيار زبون", description: "اربط الفاتورة بزبون مسجل لسهولة متابعة ديونه ومرتجعاته.", position: "top" } },
+            { element: "button.btn-pay", popover: { title: "طريقة الدفع", description: "اختر نقداً، آجل (دين)، أو حوالة بنكية.", position: "top" } }
         ],
         "purchases.php": [
-            { element: "#sourcingForm, form", popover: { title: "استلام المشتريات", description: "قم بتسجيل الوزن الناقص/الصافي والسعر المتفق عليه لاستلام القات من المورد.", position: "bottom" } },
+            { element: "form", popover: { title: "استلام المشتريات", description: "قم بتسجيل الوزن الناقص/الصافي والسعر المتفق عليه لاستلام القات من المورد.", position: "bottom" } },
             { element: ".table-responsive", popover: { title: "سجل المشتريات المستلمة", description: "الفواتير السابقة والحالية تظهر هنا بصورة مفصلة.", position: "top" } }
         ],
         "expenses.php": [
