@@ -85,17 +85,28 @@ curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
 curl_setopt($ch, CURLOPT_POST, true);
 curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
+// Fix SSL issues on Windows XAMPP and some hostings
+curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
 
 $response = curl_exec($ch);
+if(curl_errno($ch)){
+    $error_msg = curl_error($ch);
+}
 $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
 curl_close($ch);
 
 if ($httpCode !== 200 || !$response) {
-    echo json_encode(['error' => 'حدث خطأ في الاتصال بخوادم جوجل. يرجى التوصيل بالإنترنت أو التأكد من المفتاح.']);
+    $errDetail = isset($error_msg) ? $error_msg : "HTTP Code: $httpCode";
+    echo json_encode(['error' => 'حدث خطأ في الاتصال بخوادم جوجل. التقرير الفني: ' . $errDetail]);
     exit;
 }
 
 $responseData = json_decode($response, true);
+if (json_last_error() !== JSON_ERROR_NONE) {
+    echo json_encode(['error' => 'الرد من السيرفر غير صالح (ليس JSON).']);
+    exit;
+}
 
 if (isset($responseData['candidates'][0]['content']['parts'][0]['text'])) {
     $aiReply = $responseData['candidates'][0]['content']['parts'][0]['text'];
