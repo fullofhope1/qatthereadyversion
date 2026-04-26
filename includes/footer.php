@@ -8,7 +8,10 @@
 <?php endif; ?>
 
 <!-- Floating AI Chatbot Button (Super Admin Only) -->
-<?php if (isset($_SESSION['role']) && $_SESSION['role'] === 'super_admin'): ?>
+<?php if (isset($_SESSION['role']) && $_SESSION['role'] === 'super_admin'): 
+    require_once 'config/ai_config.php';
+    $gemini_key = defined('GEMINI_API_KEY') ? GEMINI_API_KEY : '';
+?>
 <a href="javascript:void(0)" id="ai_trigger" onclick="toggleAiChat()" title="المساعد الذكي" style="position:fixed; bottom:25px; left:25px; width:55px; height:55px; background:#1a1a1a; color:#fff; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:1.5rem; box-shadow:0 4px 15px rgba(0,0,0,0.3); cursor:pointer; z-index:9999; border:2px solid #ffd700; transition:all 0.3s ease;">
     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 640 512"><path d="M320 0c17.7 0 32 14.3 32 32V96H472c39.8 0 72 32.2 72 72V440c0 39.8-32.2 72-72 72H168c-39.8 0-72-32.2-72-72V168c0-39.8 32.2-72 72-72H288V32c0-17.7 14.3-32 32-32zM208 384c-8.8 0-16 7.2-16 16s7.2 16 16 16h32c8.8 0 16-7.2 16-16s-7.2-16-16-16H208zm96 0c-8.8 0-16 7.2-16 16s7.2 16 16 16h32c8.8 0 16-7.2 16-16s-7.2-16-16-16H304zm96 0c-8.8 0-16 7.2-16 16s7.2 16 16 16h32c8.8 0 16-7.2 16-16s-7.2-16-16-16H400zM264 256a40 40 0 1 0 -80 0 40 40 0 1 0 80 0zm152 40a40 40 0 1 0 0-80 40 40 0 1 0 0 80zM48 224H64V416H48c-26.5 0-48-21.5-48-48V272c0-26.5 21.5-48 48-48zm544 0c26.5 0 48 21.5 48 48v96c0 26.5-21.5 48-48 48H576V224h16z"/></svg>
 </a>
@@ -69,35 +72,46 @@
         history.scrollTop = history.scrollHeight;
 
         try {
-            const formData = new URLSearchParams();
-            formData.append('message', message);
+            const apiKey = "<?= $gemini_key ?>";
+            const systemPrompt = `أنت المساعد الذكي لنظام (القادري وماجد). مهمتك تعليم المالك فقط كيف يستخدم نظامه. الإجابة مختصرة جداً وباللهجة اليمنية وبشكل نقاط.
+            دليل النظام:
+            - التوريد (sourcing.php): لتسجيل التوريد من الرعية.
+            - المشتريات (purchases.php): للوزن الصافي وإضافته للمخزن (Fresh).
+            - المبيعات (sales.php): لبيع القات (كاش أو دين).
+            - المرتجعات (returns.php): للإرجاع العيني للقات إلى الثلاجة وإعادة الفلوس للزبون.
+            - التعويضات (refunds.php): لتعويض الزبون مالياً بدون إرجاع القات.
+            - العملاء (customers.php): حسابات الدائمين.
+            - الديون (debts.php): سداد الدفعات النقدية من الزبائن.
+            - البقايا (sales_leftovers_1 و 2): عند عدم بيع الطازج يخفض سعره للبيع الأول ثم الثاني ثم تالف.
+            - التقارير (reports.php): 15 تبويبة مالية.
+            - إغلاق اليومية (closing.php): نهاية كل يوم لتصفير الصندوق.`;
 
-            const response = await fetch('requests/process_ai_chat.php', {
+            const payload = {
+                contents: [
+                    { role: "user", parts: [{ text: systemPrompt + " \\n\\nالسؤال: " + message }] }
+                ],
+                generationConfig: { temperature: 0.2, maxOutputTokens: 500 }
+            };
+
+            const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=' + apiKey, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                    'X-Requested-With': 'XMLHttpRequest'
-                },
-                body: formData
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
             });
 
-            // If it returns HTML (PHP error) instead of JSON, catch it
-            const rawText = await response.text();
-            let data;
-            try {
-                data = JSON.parse(rawText);
-            } catch (e) {
-                console.error("Parse Error from Backend:", rawText);
-                throw new Error("السيرفر أرجع الخطأ البرمجي التالي:<br><br><div style='direction:ltr; text-align:left; background:#fff; padding:5px; border-radius:5px; font-family:monospace; color:red; overflow-x:auto;'>" + 
-                    rawText.replace(/</g, '&lt;').replace(/>/g, '&gt;') + 
-                    "</div>");
-            }
+            const data = await response.json();
             
             let replyHtml = '';
             if (data.error) {
-                replyHtml = `<span style="color:red;">${data.error}</span>`;
+                replyHtml = `<span style="color:red;">خطأ من جوجل: ${data.error.message}</span>`;
+            } else if(data.candidates && data.candidates[0]) {
+                replyHtml = data.candidates[0].content.parts[0].text;
+                // Parse simple markdown
+                replyHtml = replyHtml.replace(/\\*\\*(.+?)\\*\\*/g, '<strong>$1</strong>');
+                replyHtml = replyHtml.replace(/\\*(.+?)\\*/g, '<em>$1</em>');
+                replyHtml = replyHtml.replace(/\\n/g, '<br>');
             } else {
-                replyHtml = data.reply;
+                replyHtml = "لم أفهم السؤال، هل يمكنك التوضيح؟";
             }
 
             // Append AI Reply
@@ -112,7 +126,7 @@
             history.innerHTML += `
                 <div style="margin-bottom:10px; text-align:right;">
                     <span style="background:#f8d7da; color:#721c24; padding:8px 12px; border-radius:15px; display:inline-block; border-bottom-right-radius:0; font-size:0.85rem;">
-                        <b>خطأ:</b> ${error.message} <br><small>راجع لوحة التحكم (Console) لمزيد من التفاصيل.</small>
+                        <b>خطأ محلي في الاتصال:</b> ${error.message} <br><small>يرجى التأكد من اتصال الإنترنت في هاتفك</small>
                     </span>
                 </div>
             `;
