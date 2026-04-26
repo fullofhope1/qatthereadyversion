@@ -69,12 +69,16 @@
         history.scrollTop = history.scrollHeight;
 
         try {
+            const formData = new URLSearchParams();
+            formData.append('message', message);
+
             const response = await fetch('requests/process_ai_chat.php', {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-Requested-With': 'XMLHttpRequest'
                 },
-                body: JSON.stringify({ message: message })
+                body: formData
             });
 
             // If it returns HTML (PHP error) instead of JSON, catch it

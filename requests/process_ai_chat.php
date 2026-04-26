@@ -14,9 +14,13 @@ if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'super_admin') {
     exit;
 }
 
-// Get the user's prompt
-$data = json_decode(file_get_contents('php://input'), true);
-$userMessage = $data['message'] ?? '';
+// Get the user's prompt (From URL-encoded form data to bypass WAF)
+$userMessage = $_POST['message'] ?? '';
+if (empty($userMessage)) {
+    // Fallback if sent as JSON anyway
+    $data = json_decode(file_get_contents('php://input'), true);
+    $userMessage = $data['message'] ?? '';
+}
 
 if (empty(trim($userMessage))) {
     echo json_encode(['error' => 'الرجاء كتابة سؤال.']);
