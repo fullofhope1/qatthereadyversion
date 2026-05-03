@@ -53,6 +53,24 @@ class PurchaseRepository extends BaseRepository
 
     public function update($id, array $data)
     {
+        // Auto-recalculate agreed_price and net_cost if price or quantity changes
+        if (isset($data['price_per_kilo']) || isset($data['quantity_kg']) || isset($data['price_per_unit']) || isset($data['received_units']) || isset($data['unit_type'])) {
+            $p = $this->getById($id);
+            if ($p) {
+                $unitType = $data['unit_type'] ?? $p['unit_type'];
+                if ($unitType === 'weight') {
+                    $kg = $data['quantity_kg'] ?? $p['quantity_kg'];
+                    $priceKg = $data['price_per_kilo'] ?? $p['price_per_kilo'];
+                    $data['agreed_price'] = (float)$kg * (float)$priceKg;
+                } else {
+                    $units = $data['received_units'] ?? $p['received_units'];
+                    $priceUnit = $data['price_per_unit'] ?? $p['price_per_unit'];
+                    $data['agreed_price'] = (int)$units * (float)$priceUnit;
+                }
+                $data['net_cost'] = $data['agreed_price'];
+            }
+        }
+
         $fields = [];
         foreach ($data as $key => $value) {
             $fields[] = "$key = :$key";
@@ -139,7 +157,8 @@ class PurchaseRepository extends BaseRepository
 
     public function restoreInventory($id, $kg, $units)
     {
-        $sql = "UPDATE purchases SET quantity_kg = quantity_kg + ?, received_units = received_units + ? WHERE id = ?";
-        return $this->execute($sql, [$kg, $units, $id]);
+        // LOGIC REMOVED: We no longer modify the original purchase quantity.
+        // Inventory availability is now calculated dynamically in SaleRepository.
+        return true; 
     }
 }

@@ -92,19 +92,21 @@ $listPurch = ($view === 'Receiving' || $view === 'Printable') ? $service->getDet
 $listExp = ($view === 'Expenses' || $view === 'Printable') ? $service->getDetailedViewData('Expenses', $reportType, $date, $month, $year, null, $report_user_id) : [];
 $listWaste = ($view === 'Waste' || $view === 'Printable') ? $service->getDetailedViewData('Waste', $reportType, $date, $month, $year, null, null) : [];
 $listStaff = ($view === 'Staff') ? $service->getDetailedViewData('Staff', $reportType, $date, $month, $year) : [];
+$listShipments = ($view === 'Shipments') ? $service->getDetailedViewData('Shipments', $reportType, $date, $month, $year) : [];
 $listCust = ($view === 'Customers') ? $service->getDetailedViewData('Customers', $reportType, $date, $month, $year) : [];
 $listLO1 = ($view === 'Leftovers_1') ? $service->getDetailedViewData('Leftovers_1', $reportType, $date, $month, $year) : [];
 $listLO2 = ($view === 'Leftovers_2') ? $service->getDetailedViewData('Leftovers_2', $reportType, $date, $month, $year) : [];
 $listDamaged = ($view === 'Damaged') ? $service->getDetailedViewData('Damaged', $reportType, $date, $month, $year) : [];
+$listDeposits = ($view === 'Deposits') ? $service->getDetailedViewData('Deposits', $reportType, $date, $month, $year) : [];
 
 // --- SUMMARY & CASH CALCULATION ---
 if (in_array($view, ['Summary', 'Printable', 'Dashboard'])) {
     $cashSummary = $service->getCashSummary($reportType, $date, $month, $year, $report_user_id);
     $remainingCash = $cashSummary['remaining_cash'];
     $cashSales = $cashSummary['cash_sales'];
-    $collectedPayments = $cashSummary['collected_payments'];
-    $depositsYER = $cashSummary['deposits_yer'];
-    $cashRefunds = $cashSummary['cash_refunds'];
+    $collectedPayments = $cashSummary['wasel_cash'] ?? 0;
+    $depositsYER = $cashSummary['deposits_yer'] ?? 0;
+    $cashRefunds = $cashSummary['total_refunds'] ?? 0;
 
     if ($view === 'Dashboard') {
         $dashStats = $service->getDashboardStats();
@@ -149,7 +151,6 @@ if (in_array($view, ['Summary', 'Printable', 'Dashboard'])) {
     .report-nav-pills {
         position: relative;
         z-index: 20;
-        /* Ensure tabs are clickable over the overlapping filter container */
     }
 
     .report-nav-pills .nav-link {
@@ -219,7 +220,60 @@ if (in_array($view, ['Summary', 'Printable', 'Dashboard'])) {
         transform: translateY(-2px);
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
     }
+
+    /* FINAL FIX FOR BLANK PDF - Aggressive Visibility */
+    @media print {
+        @page { size: A4; margin: 1cm; }
+        html, body {
+            background: #fff !important;
+            color: #000 !important;
+            height: auto !important;
+            overflow: visible !important;
+        }
+        .no-print, header, footer, nav, .navbar, .report-card-header, .filter-pill-container, .btn, .modal {
+            display: none !important;
+        }
+        .container-fluid, .row, .col-12 {
+            display: block !important;
+            width: 100% !important;
+            padding: 0 !important;
+        }
+        .card {
+            border: none !important;
+            box-shadow: none !important;
+            display: block !important;
+            overflow: visible !important;
+        }
+        table {
+            width: 100% !important;
+            border-collapse: collapse !important;
+            display: table !important;
+            color: #000 !important;
+        }
+        th, td {
+            border: 1px solid #000 !important;
+            padding: 6px !important;
+            color: #000 !important;
+            font-size: 10pt !important;
+        }
+        .badge {
+            border: 1px solid #000 !important;
+            color: #000 !important;
+            background: transparent !important;
+        }
+    }
 </style>
+
+<script>
+    // Force English Filename when saving to PDF to avoid corruption
+    window.onbeforeprint = function() {
+        window._originalTitle = document.title;
+        document.title = "Qat_Report_" + new Date().toISOString().slice(0,10);
+    };
+    window.onafterprint = function() {
+        document.title = window._originalTitle;
+    };
+</script>
 
 <div class="row mb-4 no-print">
     <div class="col-12">
@@ -252,10 +306,13 @@ if (in_array($view, ['Summary', 'Printable', 'Dashboard'])) {
                             'Damaged' => ['label' => 'التوالف', 'icon' => 'fa-trash-alt', 'super_only' => false],
                             'Debts' => ['label' => 'الديون', 'icon' => 'fa-file-invoice-dollar', 'super_only' => false],
                             'unknown_transfers' => ['label' => 'حوالات', 'icon' => 'fa-question-circle', 'super_only' => false],
+                            'Settlements' => ['label' => 'التحصيلات', 'icon' => 'fa-money-bill-wave', 'super_only' => false],
+                            'Deposits' => ['label' => 'الإيداعات', 'icon' => 'fa-university', 'super_only' => false],
                             'Compensations' => ['label' => 'التعويضات', 'icon' => 'fa-hand-holding-usd', 'super_only' => true],
                             'Returns' => ['label' => 'المرتجعات', 'icon' => 'fa-undo', 'super_only' => true],
                             'Printable' => ['label' => 'طباعة', 'icon' => 'fa-print', 'super_only' => false],
                             'Dashboard' => ['label' => 'التحليل', 'icon' => 'fa-chart-pie', 'super_only' => false],
+                            'Shipments' => ['label' => 'أداء الشحنات', 'icon' => 'fa-truck-loading', 'super_only' => false],
                         ];
                         foreach ($tabs as $k => $v):
                             if ($v['super_only'] && !$isSuperAdmin) continue;
@@ -345,6 +402,31 @@ if (in_array($view, ['Summary', 'Printable', 'Dashboard'])) {
             return ($view === 'Returns' ? $isReturn : !$isReturn);
         });
     ?>
+        <div class="row g-3 mb-4 no-print">
+            <div class="col-md-6">
+                <div class="card shadow-sm border-0 border-start border-warning border-5 h-100">
+                    <div class="card-body">
+                        <h6 class="text-muted small fw-bold">إجمالي الخصم من الديون (تسويات)</h6>
+                        <?php 
+                        $debtSum = array_sum(array_map(function($r){ return $r['refund_type'] === 'Debt' ? $r['amount'] : 0; }, $filteredList));
+                        ?>
+                        <h3 class="mb-0 fw-bold text-dark"><?= number_format($debtSum) ?> <small>ريال</small></h3>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card shadow-sm border-0 border-start border-danger border-5 h-100">
+                    <div class="card-body">
+                        <h6 class="text-muted small fw-bold">إجمالي المطالب المخرجة (كاش)</h6>
+                        <?php 
+                        $cashSum = array_sum(array_map(function($r){ return $r['refund_type'] === 'Cash' ? $r['amount'] : 0; }, $filteredList));
+                        ?>
+                        <h3 class="mb-0 fw-bold text-danger"><?= number_format($cashSum) ?> <small>ريال</small></h3>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <div class="card report-table-card shadow-sm border-0">
             <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
                 <h5 class="mb-0 fw-bold text-dark">
@@ -360,26 +442,36 @@ if (in_array($view, ['Summary', 'Printable', 'Dashboard'])) {
                 <div class="table-responsive">
                     <table class="table table-hover mb-0 align-middle report-table">
                         <thead>
-                            <tr>
-                                <th>الزبون</th>
-                                <th>النوع</th>
+                            <tr class="bg-light">
+                                <th class="ps-4">الزبون</th>
+                                <th>طريقة التعويض</th>
                                 <?php if ($view === 'Returns'): ?><th>الكمية المسترجعة</th><?php endif; ?>
                                 <th>البيان (السبب)</th>
-                                <th class="text-end">المبلغ (ريال)</th>
+                                <th class="text-end pe-4">المبلغ (ريال)</th>
                             </tr>
                         </thead>
                         <tbody>
                             <?php foreach ($filteredList as $r): ?>
                                 <tr>
-                                    <td><div class="fw-bold"><?= htmlspecialchars($r['cust_name'] ?? 'عميل سفري') ?></div></td>
-                                    <td><span class="badge bg-light text-dark border"><?= htmlspecialchars($r['refund_type']) ?></span></td>
+                                    <td class="ps-4"><div class="fw-bold"><?= htmlspecialchars($r['cust_name'] ?? 'عميل سفري') ?></div></td>
+                                    <td>
+                                        <?php if ($r['refund_type'] === 'Debt'): ?>
+                                            <span class="badge bg-warning-subtle text-warning border border-warning px-3 rounded-pill">
+                                                <i class="fas fa-file-invoice-dollar me-1"></i> خصمـ مديونية
+                                            </span>
+                                        <?php else: ?>
+                                            <span class="badge bg-danger-subtle text-danger border border-danger px-3 rounded-pill">
+                                                <i class="fas fa-money-bill-wave me-1"></i> دفعـ نقدًا (كاش)
+                                            </span>
+                                        <?php endif; ?>
+                                    </td>
                                     <?php if ($view === 'Returns'): ?>
                                     <td class="small fw-bold text-primary">
                                         <?= $r['weight_kg'] > 0 ? number_format($r['weight_kg'], 3).' كجم' : $r['quantity_units'].' حبة' ?>
                                     </td>
                                     <?php endif; ?>
                                     <td class="text-muted small"><?= htmlspecialchars($r['reason']) ?></td>
-                                    <td class="text-end fw-bold text-dark"><?= number_format($r['amount']) ?></td>
+                                    <td class="text-end fw-bold text-dark pe-4"><?= number_format($r['amount']) ?></td>
                                 </tr>
                             <?php endforeach; ?>
                             <?php if (empty($filteredList)): ?>
@@ -438,6 +530,43 @@ if (in_array($view, ['Summary', 'Printable', 'Dashboard'])) {
             row.style.display = row.textContent.toLowerCase().includes(term) ? '' : 'none';
         });
     }
+
+    function showDetails(category, title) {
+        const modal = new bootstrap.Modal(document.getElementById('detailsModal'));
+        const body = document.getElementById('detailsModalBody');
+        const label = document.getElementById('detailsModalLabel');
+        
+        label.innerText = title;
+        body.innerHTML = '<div class="text-center py-5"><div class="spinner-border text-warning"></div><p class="mt-2 text-muted">جاري تحميل التفاصيل...</p></div>';
+        modal.show();
+
+        const params = new URLSearchParams(window.location.search);
+        params.set('category', category);
+        
+        fetch('ajax_report_details.php?' + params.toString())
+            .then(response => response.text())
+            .then(html => {
+                body.innerHTML = html;
+            })
+            .catch(err => {
+                body.innerHTML = '<div class="alert alert-danger m-3">حدث خطأ أثناء تحميل البيانات</div>';
+            });
+    }
 </script>
+
+<!-- Details Modal -->
+<div class="modal fade" id="detailsModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 20px; overflow: hidden;">
+            <div class="modal-header bg-dark text-white py-3">
+                <h5 class="modal-title fw-bold" id="detailsModalLabel">تفاصيل العمليات</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-0" id="detailsModalBody">
+                <!-- Content loaded via AJAX -->
+            </div>
+        </div>
+    </div>
+</div>
 
 <?php include 'includes/footer.php'; ?>

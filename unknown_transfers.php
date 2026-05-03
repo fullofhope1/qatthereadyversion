@@ -140,6 +140,10 @@ $customers = $custRepo->getAllActive();
                             <label class="form-label fw-bold"><i class="fas fa-calendar-alt me-1 text-warning"></i> التاريخ</label>
                             <input type="date" class="form-control form-control-lg" name="transfer_date" id="f_date" value="<?= date('Y-m-d') ?>" required>
                         </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold"><i class="fas fa-user-tie me-1 text-warning"></i> اسم المستلم</label>
+                            <input type="text" class="form-control form-control-lg" name="receiver_name" id="f_receiver" placeholder="من استلم الحوالة؟" required>
+                        </div>
                         <div class="row mb-3">
                             <div class="col-7">
                                 <label class="form-label fw-bold"><i class="fas fa-money-bill me-1 text-warning"></i> المبلغ</label>
@@ -161,6 +165,10 @@ $customers = $custRepo->getAllActive();
 
                     <!-- Step 2: Sender Info -->
                     <div class="step-panel" id="sp2">
+                        <div class="mb-3">
+                            <label class="form-label fw-bold"><i class="fas fa-user-tie me-1 text-warning"></i> اسم المستلم</label>
+                            <input type="text" class="form-control form-control-lg" name="receiver_name" id="f_receiver" placeholder="من استلم الحوالة؟" required>
+                        </div>
                         <div class="mb-3">
                             <label class="form-label fw-bold"><i class="fas fa-receipt me-1 text-warning"></i> رقم السند / الحوالة</label>
                             <input type="text" class="form-control form-control-lg" name="receipt_number" id="f_receipt" placeholder="مثال: 123456" required>
@@ -298,9 +306,15 @@ $customers = $custRepo->getAllActive();
                             <input type="text" name="receipt_number" id="edit_tf_receipt" class="form-control" required>
                         </div>
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label fw-bold">اسم المرسل</label>
-                        <input type="text" name="sender_name" id="edit_tf_sender" class="form-control" required>
+                    <div class="row mb-3">
+                        <div class="col-6">
+                            <label class="form-label fw-bold">اسم المستلم</label>
+                            <input type="text" name="receiver_name" id="edit_tf_receiver" class="form-control" required>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label fw-bold">اسم المرسل</label>
+                            <input type="text" name="sender_name" id="edit_tf_sender" class="form-control" required>
+                        </div>
                     </div>
                     <div class="row mb-3">
                         <div class="col-7">
@@ -384,6 +398,7 @@ $customers = $custRepo->getAllActive();
         document.getElementById('edit_tf_date').value = t.transfer_date;
         document.getElementById('edit_tf_receipt').value = t.receipt_number;
         document.getElementById('edit_tf_sender').value = t.sender_name;
+        document.getElementById('edit_tf_receiver').value = t.receiver_name || '';
         document.getElementById('edit_tf_amount').value = t.amount;
         document.getElementById('edit_tf_currency').value = t.currency || 'YER';
         document.getElementById('edit_tf_notes').value = t.notes || '';
@@ -444,8 +459,9 @@ $customers = $custRepo->getAllActive();
         if (step === 2) {
             const amt = document.getElementById('f_amount').value;
             const dt = document.getElementById('f_date').value;
-            if (!amt || !dt) {
-                alert('يرجى تعبئة التاريخ والمبلغ.');
+            const receiver = document.getElementById('f_receiver').value;
+            if (!amt || !dt || !receiver) {
+                alert('يرجى تعبئة التاريخ والمستلم والمبلغ.');
                 return;
             }
         }

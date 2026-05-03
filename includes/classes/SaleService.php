@@ -133,6 +133,22 @@ class SaleService extends BaseService
             }
 
             // 2. Credit Limit Check
+            // If payment is not Debt and no paid_amount is provided, assume full payment
+            if ($data['payment_method'] !== 'Debt' && !isset($data['paid_amount'])) {
+                $data['paid_amount'] = $data['price'];
+            }
+            
+            $isPartial = (float)$data['price'] > (float)($data['paid_amount'] ?? 0);
+            if ($data['payment_method'] !== 'Debt' && $isPartial) {
+                // Force to debt if not fully paid to ensure correct accounting (Cash, Kuraimi, etc.)
+                $data['payment_method'] = 'Debt'; 
+                $data['is_paid'] = 0;
+            } elseif ($data['payment_method'] === 'Debt') {
+                $data['is_paid'] = 0;
+            } else {
+                $data['is_paid'] = 1;
+            }
+
             if ($data['payment_method'] === 'Debt' && !empty($data['customer_id'])) {
                 $cust = $this->customerRepo->getById($data['customer_id']);
                 if ($cust) {
@@ -147,11 +163,9 @@ class SaleService extends BaseService
             $saleId = $this->saleRepo->create($data);
 
             // 4. Update Customer Debt
-            if ($data['payment_method'] === 'Debt' && !empty($data['customer_id'])) {
-                $debtAmount = (float)$data['price'] - (float)($data['paid_amount'] ?? 0);
-                if ($debtAmount > 0) {
-                    $this->customerRepo->incrementDebt($data['customer_id'], $debtAmount);
-                }
+            $debtAmount = (float)$data['price'] - (float)($data['paid_amount'] ?? 0);
+            if ($debtAmount > 0 && !empty($data['customer_id'])) {
+                $this->customerRepo->incrementDebt($data['customer_id'], $debtAmount);
             }
 
             $this->saleRepo->commit();

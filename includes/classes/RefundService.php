@@ -140,23 +140,9 @@ class RefundService
             }
 
             // 4. Inventory Adjustments
-            if (!empty($data['sale_id'])) {
-                $sale = $this->saleRepo->getById($data['sale_id']);
-                if ($sale) {
-                    $weight = (float)($data['weight_kg'] ?? 0);
-                    $units = (int)($data['quantity_units'] ?? 0);
-
-                    if ($weight > 0 || $units > 0) {
-                        if ($sale['purchase_id'] && $this->purchaseRepo) {
-                            // Restore to purchases
-                            $this->purchaseRepo->restoreInventory($sale['purchase_id'], $weight, $units);
-                        } elseif ($sale['leftover_id'] && $this->leftoverRepo) {
-                            // Restore to leftovers
-                            $this->leftoverRepo->restoreInventory($sale['leftover_id'], $weight, $units);
-                        }
-                    }
-                }
-            }
+            // Note: We no longer call restoreInventory on purchases/leftovers.
+            // Availability is now calculated dynamically: Original - (Sold - Returned).
+            // The returned quantities are already stored in the sale record via updateRefundAmountAndQuantity above.
 
             $this->refundRepo->commit();
             return true;

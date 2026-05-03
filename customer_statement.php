@@ -35,15 +35,21 @@ if ($from && $to) {
     $dateParamsExtra = [];
 }
 
-// 1. Fetch Sales (Debits)
+// 1. Fetch ALL Sales (both Cash and Debt)
+// For Cash/Transfer: debit=price, credit=price (already paid, no effect on debt balance)
+// For Debt:          debit=price, credit=0    (unpaid, increases debt balance)
 $salesStmt = $pdo->prepare(
     "
-    SELECT s.sale_date as t_date, 'بيع' as t_type,
-           CONCAT(COALESCE(t.name,'?'), ' (', s.weight_kg, ' كجم)') as t_desc,
-           s.price as debit, 0 as credit, s.id as ref_id
+    SELECT s.sale_date as t_date,
+           CASE WHEN s.payment_method = 'Debt' THEN 'بيع آجل' ELSE CONCAT('بيع (' , s.payment_method, ')') END as t_type,
+           CONCAT(COALESCE(t.name,'?'), ' (', COALESCE(s.weight_kg, s.quantity_units), ' ', CASE WHEN s.unit_type='weight' THEN 'كجم' ELSE 'وحدة' END, ')') as t_desc,
+           s.price as debit,
+           CASE WHEN s.payment_method != 'Debt' THEN s.price ELSE 0 END as credit,
+           s.id as ref_id,
+           s.payment_method
     FROM sales s
     LEFT JOIN qat_types t ON s.qat_type_id = t.id
-    WHERE s.customer_id = ? AND s.payment_method = 'Debt'" . ($dateFilter ? str_replace('t_date', 's.sale_date', $dateFilter) : "")
+    WHERE s.customer_id = ? AND s.is_returned = 0" . ($dateFilter ? str_replace('t_date', 's.sale_date', $dateFilter) : "")
 );
 $salesStmt->execute(array_merge([$id], $dateParamsExtra));
 $sales_data = $salesStmt->fetchAll();

@@ -37,7 +37,8 @@ function trigger_auto_closing($pdo, $targetDate = null, $force = false)
          */
         try {
             $repository = new DailyCloseRepository($pdo);
-            $service = new DailyCloseService($repository);
+            $debtRepo = new DebtRepository($pdo); // Added to ensure debt reconciliation works in auto-close
+            $service = new DailyCloseService($repository, $debtRepo);
             $service->closeDay($current);
         } catch (Exception $e) {
             error_log("Auto-close failed for date $current: " . $e->getMessage());

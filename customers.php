@@ -41,8 +41,13 @@ $customers = $customerService->listCustomers();
                                 <tr>
                                     <td><?= htmlspecialchars($c['name']) ?></td>
                                     <td><?= htmlspecialchars($c['phone']) ?></td>
-                                    <td class="<?= $c['total_debt'] > 0 ? 'text-danger fw-bold' : 'text-success' ?>">
-                                        <?= number_format($c['total_debt']) ?> / <span class="text-muted small"><?= number_format($c['debt_limit']) ?></span>
+                                    <td class="<?= $c['total_debt'] > 0 ? 'text-danger fw-bold' : ($c['total_debt'] < 0 ? 'text-success' : '') ?>">
+                                        <?php if ($c['total_debt'] < 0): ?>
+                                            <span class="badge bg-success">له: <?= number_format(abs($c['total_debt'])) ?></span>
+                                        <?php else: ?>
+                                            <?= number_format($c['total_debt']) ?>
+                                        <?php endif; ?>
+                                        / <span class="text-muted small"><?= number_format($c['debt_limit'] ?? 0) ?></span>
                                         <?php if (!is_null($c['debt_limit']) && $c['total_debt'] > $c['debt_limit']): ?>
                                             <span class="badge bg-danger ms-2">تجاوز السقف</span>
                                         <?php endif; ?>

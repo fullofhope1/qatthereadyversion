@@ -3,7 +3,7 @@
 
 class ReportService extends BaseService
 {
-    private $reportRepo;
+    public $reportRepo;
 
     public function __construct(ReportRepository $reportRepo)
     {
@@ -42,6 +42,10 @@ class ReportService extends BaseService
                 return $this->reportRepo->getLeftoversList('Damaged', $reportType, $date, $month, $year);
             case 'unknown_transfers':
                 return $this->reportRepo->getUnknownTransfersList($reportType, $date, $month, $year);
+            case 'Deposits':
+                return $this->reportRepo->getDepositsList($reportType, $date, $month, $year);
+            case 'Shipments':
+                return $this->reportRepo->getShipmentPerformance($reportType, $date, $month, $year);
             case 'Printable':
                 return [
                     'sales' => $this->reportRepo->getSalesList($reportType, $date, $month, $year),
@@ -57,7 +61,9 @@ class ReportService extends BaseService
     public function getCashSummary($reportType, $date, $month, $year, $userId = null)
     {
         $summary = $this->reportRepo->getCashSummary($reportType, $date, $month, $year, $userId);
-        $summary['remaining_cash'] = ($summary['cash_sales'] + $summary['collected_payments'] + $summary['total_unknown_transfers']) - ($summary['total_expenses'] + $summary['cash_refunds'] + $summary['deposits_yer']);
+        // Calculate remaining cash using correct keys from the updated repository
+        $summary['remaining_cash'] = (($summary['cash_sales'] ?? 0) + ($summary['wasel_cash'] ?? 0)) - (($summary['total_cash_expenses'] ?? 0) + ($summary['total_cash_refunds'] ?? 0) + ($summary['total_compensations'] ?? 0) + ($summary['deposits_yer'] ?? 0));
+        $summary['remaining_transfer'] = (($summary['transfer_sales'] ?? 0) + ($summary['wasel_transfer'] ?? 0)) - ($summary['total_transfer_expenses'] ?? 0);
         return $summary;
     }
 

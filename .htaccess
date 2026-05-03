@@ -1,0 +1,34 @@
+# 1. Prevent directory listing
+Options -Indexes
+
+# 2. Protect sensitive files and directories
+<FilesMatch "^\.|\.(bak|config|sql|log|ini|sh|dist|bin)$|^config\.php$|^composer\.(json|lock)$">
+    Order deny,allow
+    Deny from all
+</FilesMatch>
+
+# 3. Secure Routing (Obfuscated URLs)
+RewriteEngine On
+
+# Ensure we don't rewrite actual files or directories
+RewriteCond %{REQUEST_FILENAME} -f [OR]
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteRule ^ - [L]
+
+# Route everything else to gateway.php as a potential obfuscated token
+RewriteRule ^([^/]+)$ gateway.php?route=$1 [QSA,L]
+
+# Block access to specific directories
+RewriteRule ^(config|includes|backups|migrations|tests|tools|tmp|trash)/ - [F,L]
+
+# 4. Force HTTPS (Optional - uncomment if SSL is installed)
+# RewriteCond %{HTTPS} off
+# RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+# 5. Security Headers
+<IfModule mod_headers.c>
+    Header set X-Content-Type-Options "nosniff"
+    Header set X-Frame-Options "SAMEORIGIN"
+    Header set X-XSS-Protection "1; mode=block"
+    Header set Referrer-Policy "no-referrer-when-downgrade"
+</IfModule>

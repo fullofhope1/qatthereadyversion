@@ -19,7 +19,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'category' => $_POST['category'],
             'description' => $_POST['description'] ?? '',
             'amount' => (float)$_POST['amount'],
-            'staff_id' => !empty($_POST['staff_id']) ? (int)$_POST['staff_id'] : null
+            'payment_method' => $_POST['payment_method'] ?? 'Cash',
+            'staff_id' => ($_POST['category'] === 'Staff') && !empty($_POST['staff_id']) ? (int)$_POST['staff_id'] : null,
+            'provider_id' => ($_POST['category'] === 'تسديد مورد') && !empty($_POST['provider_id']) ? (int)$_POST['provider_id'] : null
         ];
 
         $service->updateExpense($id, $data);

@@ -54,22 +54,26 @@ class SaleRepository extends BaseRepository
 
     public function getSoldKgByPurchaseId($purchaseId)
     {
-        return $this->fetchColumn("SELECT SUM(COALESCE(weight_kg, weight_grams/1000)) FROM sales WHERE purchase_id = ? AND is_returned = 0", [$purchaseId]) ?: 0;
+        $sold = $this->fetchColumn("SELECT SUM(COALESCE(weight_kg, weight_grams/1000) - COALESCE(returned_kg, 0)) FROM sales WHERE purchase_id = ? AND is_returned = 0", [$purchaseId]) ?: 0;
+        $leftovers = $this->fetchColumn("SELECT SUM(weight_kg) FROM leftovers WHERE purchase_id = ?", [$purchaseId]) ?: 0;
+        return (float)$sold + (float)$leftovers;
     }
 
     public function getSoldUnitsByPurchaseId($purchaseId)
     {
-        return $this->fetchColumn("SELECT SUM(quantity_units) FROM sales WHERE purchase_id = ? AND is_returned = 0", [$purchaseId]) ?: 0;
+        $sold = $this->fetchColumn("SELECT SUM(quantity_units - COALESCE(returned_units, 0)) FROM sales WHERE purchase_id = ? AND is_returned = 0", [$purchaseId]) ?: 0;
+        $leftovers = $this->fetchColumn("SELECT SUM(quantity_units) FROM leftovers WHERE purchase_id = ?", [$purchaseId]) ?: 0;
+        return (int)$sold + (int)$leftovers;
     }
 
     public function getSoldKgByLeftoverId($leftoverId)
     {
-        return $this->fetchColumn("SELECT SUM(COALESCE(weight_kg, weight_grams/1000)) FROM sales WHERE leftover_id = ? AND is_returned = 0", [$leftoverId]) ?: 0;
+        return $this->fetchColumn("SELECT SUM(COALESCE(weight_kg, weight_grams/1000) - COALESCE(returned_kg, 0)) FROM sales WHERE leftover_id = ? AND is_returned = 0", [$leftoverId]) ?: 0;
     }
 
     public function getSoldUnitsByLeftoverId($leftoverId)
     {
-        return $this->fetchColumn("SELECT SUM(quantity_units) FROM sales WHERE leftover_id = ? AND is_returned = 0", [$leftoverId]) ?: 0;
+        return $this->fetchColumn("SELECT SUM(quantity_units - COALESCE(returned_units, 0)) FROM sales WHERE leftover_id = ? AND is_returned = 0", [$leftoverId]) ?: 0;
     }
 
     public function getById($id)
@@ -111,20 +115,31 @@ class SaleRepository extends BaseRepository
 
     public function getSalesMap($date = null)
     {
-        $sql = "SELECT purchase_id, 
-                       SUM(COALESCE(weight_kg, weight_grams/1000)) as sold_kg, 
-                       SUM(quantity_units) as sold_units 
-                FROM sales 
-                WHERE is_returned = 0 AND purchase_id IS NOT NULL";
+        $sql = "SELECT p.id as purchase_id, 
+                       (COALESCE(s.sold_kg, 0) + COALESCE(l.leftover_kg, 0)) as sold_kg, 
+                       (COALESCE(s.sold_units, 0) + COALESCE(l.leftover_units, 0)) as sold_units 
+                FROM purchases p
+                LEFT JOIN (
+                    SELECT purchase_id, 
+                           SUM(COALESCE(weight_kg, weight_grams/1000) - COALESCE(returned_kg, 0)) as sold_kg, 
+                           SUM(quantity_units - COALESCE(returned_units, 0)) as sold_units 
+                    FROM sales 
+                    WHERE is_returned = 0 AND purchase_id IS NOT NULL 
+                    GROUP BY purchase_id
+                ) s ON p.id = s.purchase_id
+                LEFT JOIN (
+                    SELECT purchase_id, SUM(weight_kg) as leftover_kg, SUM(quantity_units) as leftover_units
+                    FROM leftovers GROUP BY purchase_id
+                ) l ON p.id = l.purchase_id
+                WHERE (s.purchase_id IS NOT NULL OR l.purchase_id IS NOT NULL)";
         
         $params = [];
         if ($date) {
-            // FIX #11: Filter by sale_date (business date), not created_at (system timestamp)
-            $sql .= " AND sale_date >= ?";
+            $sql .= " AND p.purchase_date = ?";
             $params[] = $date;
         }
         
-        $sql .= " GROUP BY purchase_id";
+        $sql .= " GROUP BY p.id";
         
         return $this->fetchAll($sql, $params);
     }

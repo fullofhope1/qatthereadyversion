@@ -63,8 +63,9 @@ class LeftoverRepository extends BaseRepository
 
     public function restoreInventory($id, $kg, $units)
     {
-        $sql = "UPDATE leftovers SET weight_kg = weight_kg + ?, quantity_units = quantity_units + ? WHERE id = ?";
-        return $this->execute($sql, [$kg, $units, $id]);
+        // LOGIC REMOVED: We no longer modify the original leftover quantity.
+        // Inventory availability is now calculated dynamically.
+        return true; 
     }
 
     /**

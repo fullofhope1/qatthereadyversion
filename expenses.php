@@ -6,14 +6,17 @@ include_once 'includes/header.php';
 $staffRepo = new StaffRepository($pdo);
 $expenseRepo = new ExpenseRepository($pdo);
 $depositRepo = new DepositRepository($pdo);
+$providerRepo = new ProviderRepository($pdo);
 
 // Fetch Staff with current withdrawals
 $user_id = $_SESSION['user_id'];
 $staff = $staffRepo->getWithCurrentWithdrawals($user_id);
 $jsonStaff = json_encode($staff);
 
-// Fetch Today's Data
 $today = date('Y-m-d');
+
+// Providers list for the new category (Fetching all to ensure visibility)
+$providers = $providerRepo->getAll();
 
 // Expenses
 $expenses = $expenseRepo->getTodayExpenses($today, $user_id);
@@ -21,8 +24,13 @@ $expenses = $expenseRepo->getTodayExpenses($today, $user_id);
 // Deposits
 $deposits = $depositRepo->getTodayDeposits($today, $user_id);
 
-// Restored Categories list
-$categories = ['إيجار', 'كهرباء', 'ماء', 'تغذية', 'نقل', 'أخرى'];
+// Restored Categories list with role-based filtering
+$isSuperAdmin = ($_SESSION['role'] ?? 'admin') === 'super_admin';
+$categories = ['إيجار', 'كهرباء', 'ماء', 'تغذية', 'نقل'];
+if ($isSuperAdmin) {
+    $categories[] = 'تسديد مورد';
+}
+$categories[] = 'أخرى';
 
 $totalExp = 0;
 foreach ($expenses as $e) {
@@ -174,6 +182,7 @@ foreach ($expenses as $e) {
 
 <div class="container py-4">
     <div class="text-center">
+        <?php if ($isSuperAdmin): ?>
         <div class="type-toggle">
             <button class="type-btn active-exp" id="btnExp" onclick="switchTab('expense')">
                 <i class="fas fa-arrow-up-right-from-square"></i> مصاريف (خرج)
@@ -182,6 +191,9 @@ foreach ($expenses as $e) {
                 <i class="fas fa-arrow-down-left-and-arrow-up-right-to-square"></i> توريد (إيداع)
             </button>
         </div>
+        <?php else: ?>
+            <h3 class="mb-4 fw-bold text-dark"><i class="fas fa-wallet me-2"></i> إدارة المصاريف</h3>
+        <?php endif; ?>
     </div>
 
     <div class="row justify-content-center">
@@ -206,7 +218,6 @@ foreach ($expenses as $e) {
                                 </select>
                             </div>
                         </div>
-
                         <div class="mb-3" id="staff_group" style="display:none;">
                             <span class="floating-label">الموظف</span>
                             <div class="input-group">
@@ -222,6 +233,19 @@ foreach ($expenses as $e) {
                             <div id="staffLimitWarning" class="mt-2 small fw-bold" style="display:none;"></div>
                         </div>
 
+                        <div class="mb-3" id="provider_group" style="display:none;">
+                            <span class="floating-label">المورد (الرعوي)</span>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-truck-loading"></i></span>
+                                <select name="provider_id" id="providerSelect" class="form-select">
+                                    <option value="">-- اختر مورد --</option>
+                                    <?php foreach ($providers as $p): ?>
+                                        <option value="<?= $p['id'] ?>"><?= htmlspecialchars($p['name']) ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                        </div>
+
                         <div class="mb-3">
                             <span class="floating-label">ملاحظة</span>
                             <div class="input-group">
@@ -230,11 +254,23 @@ foreach ($expenses as $e) {
                             </div>
                         </div>
 
-                        <div class="mb-4">
-                            <span class="floating-label">المبلغ المطلوب</span>
-                            <div class="input-group">
-                                <span class="input-group-text fw-bold">YER</span>
-                                <input type="number" name="amount" class="form-control form-control-lg fw-bold text-danger" placeholder="0" required>
+                        <div class="row">
+                            <div class="col-md-6 mb-4">
+                                <span class="floating-label">المبلغ المطلوب</span>
+                                <div class="input-group">
+                                    <span class="input-group-text fw-bold">YER</span>
+                                    <input type="number" name="amount" class="form-control form-control-lg fw-bold text-danger" placeholder="0" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-4">
+                                <span class="floating-label">طريقة الدفع</span>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="fas fa-credit-card"></i></span>
+                                    <select name="payment_method" class="form-select" required>
+                                        <option value="Cash">نقد (كاش)</option>
+                                        <option value="Transfer">تحويل (إلكتروني)</option>
+                                    </select>
+                                </div>
                             </div>
                         </div>
 
@@ -297,8 +333,8 @@ foreach ($expenses as $e) {
     </div>
 
     <!-- Tables Area -->
-    <div class="row g-4">
-        <div class="col-md-6">
+    <div class="row g-4 <?= $isSuperAdmin ? '' : 'justify-content-center' ?>">
+        <div class="col-md-<?= $isSuperAdmin ? '6' : '8' ?>">
             <div class="card-list shadow-sm">
                 <div class="d-flex justify-content-between align-items-center mb-4">
                     <h6 class="mb-0 fw-bold text-danger border-bottom border-2 border-danger pb-1">مصاريف اليوم</h6>
@@ -314,11 +350,14 @@ foreach ($expenses as $e) {
                                 <tr class="list-item">
                                     <td>
                                         <div class="fw-bold"><?= htmlspecialchars($e['description'] ?: 'رقم ' . $e['id']) ?></div>
-                                        <div class="text-muted" style="font-size: 0.75rem;"><span class="badge bg-secondary-subtle text-secondary me-1"><?= htmlspecialchars($e['category'] ?: 'غير مصنف') ?></span> | <?= htmlspecialchars($e['staff_name'] ?? 'مصروف عام') ?></div>
+                                        <div class="text-muted" style="font-size: 0.75rem;">
+                                            <span class="badge bg-secondary-subtle text-secondary me-1"><?= htmlspecialchars($e['category'] ?: 'غير مصنف') ?></span> 
+                                            | <?= htmlspecialchars($e['staff_name'] ?? ($e['provider_name'] ?? 'مصروف عام')) ?>
+                                        </div>
                                     </td>
                                     <td class="text-end fw-bold text-danger fs-6"><?= number_format($e['amount']) ?></td>
                                     <td class="text-end">
-                                        <button type="button" class="btn btn-sm btn-link text-primary" onclick="editExpense(<?= $e['id'] ?>, '<?= addslashes($e['category']) ?>', '<?= addslashes($e['description']) ?>', <?= $e['amount'] ?>, <?= $e['staff_id'] ?? 'null' ?>)"><i class="fas fa-edit"></i></button>
+                                        <button type="button" class="btn btn-sm btn-link text-primary" onclick="editExpense(<?= $e['id'] ?>, '<?= addslashes($e['category']) ?>', '<?= addslashes($e['description']) ?>', <?= $e['amount'] ?>, <?= $e['staff_id'] ?? 'null' ?>, <?= $e['provider_id'] ?? 'null' ?>, '<?= $e['payment_method'] ?>')"><i class="fas fa-edit"></i></button>
                                         <form action="requests/delete_expense.php" method="POST" onsubmit="return confirm('هل أنت متأكد؟')" style="display:inline;">
                                             <input type="hidden" name="id" value="<?= $e['id'] ?>">
                                             <button type="submit" class="btn btn-sm btn-link text-muted"><i class="fas fa-times"></i></button>
@@ -337,6 +376,7 @@ foreach ($expenses as $e) {
             </div>
         </div>
 
+        <?php if ($isSuperAdmin): ?>
         <div class="col-md-6">
             <div class="card-list shadow-sm">
                 <h6 class="mb-4 fw-bold text-primary border-bottom border-2 border-primary pb-1">المبالغ الموردة</h6>
@@ -372,6 +412,7 @@ foreach ($expenses as $e) {
                 </div>
             </div>
         </div>
+        <?php endif; ?>
     </div>
 </div>
 
@@ -404,13 +445,31 @@ foreach ($expenses as $e) {
                             <?php endforeach; ?>
                         </select>
                     </div>
+                    <div class="mb-3" id="edit_provider_group" style="display:none;">
+                        <label class="floating-label">المورد (الرعوي)</label>
+                        <select name="provider_id" id="edit_provider_select" class="form-select">
+                            <option value="">-- اختر مورد --</option>
+                            <?php foreach ($providers as $p): ?>
+                                <option value="<?= $p['id'] ?>"><?= htmlspecialchars($p['name']) ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
                     <div class="mb-3">
                         <label class="floating-label">ملاحظة</label>
                         <input type="text" name="description" id="edit_exp_desc" class="form-control">
                     </div>
-                    <div class="mb-3">
-                        <label class="floating-label">المبلغ</label>
-                        <input type="number" name="amount" id="edit_exp_amount" class="form-control" required>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="floating-label">المبلغ</label>
+                            <input type="number" name="amount" id="edit_exp_amount" class="form-control" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="floating-label">طريقة الدفع</label>
+                            <select name="payment_method" id="edit_exp_method" class="form-select" required>
+                                <option value="Cash">نقد (كاش)</option>
+                                <option value="Transfer">تحويل (إلكتروني)</option>
+                            </select>
+                        </div>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -483,9 +542,15 @@ foreach ($expenses as $e) {
         }
     }
 
-    // Toggle Staff select
+    // Toggle Staff/Provider select
     document.getElementById('catSelect').addEventListener('change', function() {
+        console.log("Category Selected:", this.value);
         document.getElementById('staff_group').style.display = (this.value === 'Staff' ? 'block' : 'none');
+        // Robust comparison for the category name
+        const isProviderPayment = (this.value.trim() === 'تسديد مورد');
+        console.log("Is Provider Payment?", isProviderPayment);
+        document.getElementById('provider_group').style.display = isProviderPayment ? 'block' : 'none';
+        
         if (this.value !== 'Staff') document.getElementById('staffLimitWarning').style.display = 'none';
     });
 
@@ -522,7 +587,7 @@ foreach ($expenses as $e) {
         }
     }
 
-    function editExpense(id, category, description, amount, staffId) {
+    function editExpense(id, category, description, amount, staffId, providerId) {
         document.getElementById('edit_exp_id').value = id;
 
         // Ensure category exists in dropdown, else add it dynamically
@@ -544,6 +609,11 @@ foreach ($expenses as $e) {
         catSelect.value = category || "أخرى";
         document.getElementById('edit_exp_desc').value = description;
         document.getElementById('edit_exp_amount').value = amount;
+        
+        // Handle payment method if it exists in the row data
+        // For simplicity, we'll assume it's passed or defaults to Cash
+        const method = arguments[6] || 'Cash'; 
+        document.getElementById('edit_exp_method').value = method;
 
         // Set Staff
         const staffSelect = document.getElementById('edit_staff_select');
@@ -555,12 +625,23 @@ foreach ($expenses as $e) {
             document.getElementById('edit_staff_group').style.display = (category === 'Staff' ? 'block' : 'none');
         }
 
+        // Set Provider
+        const providerSelect = document.getElementById('edit_provider_select');
+        if (providerId && providerId !== "null") {
+            providerSelect.value = providerId;
+            document.getElementById('edit_provider_group').style.display = 'block';
+        } else {
+            providerSelect.value = "";
+            document.getElementById('edit_provider_group').style.display = (category === 'تسديد مورد' ? 'block' : 'none');
+        }
+
         new bootstrap.Modal(document.getElementById('editExpenseModal')).show();
     }
 
     function toggleEditStaffGroup() {
         const cat = document.getElementById('edit_exp_cat').value;
         document.getElementById('edit_staff_group').style.display = (cat === 'Staff' ? 'block' : 'none');
+        document.getElementById('edit_provider_group').style.display = (cat === 'تسديد مورد' ? 'block' : 'none');
     }
 
     function editDeposit(id, recipient, notes, amount, currency) {

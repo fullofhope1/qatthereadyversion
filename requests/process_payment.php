@@ -24,12 +24,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             throw new Exception("المبلغ يجب أن يكون أكبر من صفر");
         }
 
-        if ($amount > $cust['total_debt']) {
-            throw new Exception("مبلغ السداد (" . number_format($amount) . ") أكبر من الدين الحالي (" . number_format($cust['total_debt']) . ")");
+        // ✅ FIX #1: Real-time debt — calculated directly from unpaid sales (not cached total_debt)
+        $debtStmt = $pdo->prepare(
+            "SELECT COALESCE(SUM(price - paid_amount - COALESCE(refund_amount,0)),0)
+             FROM sales WHERE customer_id = ? AND is_paid = 0 AND is_returned = 0"
+        );
+        $debtStmt->execute([$customer_id]);
+        $realDebt = (float)$debtStmt->fetchColumn();
+
+        if ($amount > $realDebt + 0.01) {
+            throw new Exception("مبلغ السداد (" . number_format($amount) . ") أكبر من الدين الفعلي (" . number_format($realDebt) . ")");
         }
 
         $payment_method = $_POST['payment_method'] ?? 'Cash';
-        if ($service->recordPayment($customer_id, $amount, $note, $payment_method)) {
+        $transferData = [];
+        if ($payment_method === 'Transfer') {
+            $transferData = [
+                'sender' => $_POST['transfer_sender'] ?? '',
+                'receiver' => $_POST['transfer_receiver'] ?? '',
+                'number' => $_POST['transfer_number'] ?? '',
+                'company' => $_POST['transfer_company'] ?? ''
+            ];
+        }
+
+        if ($service->recordPayment($customer_id, $amount, $note, $payment_method, $transferData)) {
             header("Location: ../customer_details.php?id=$customer_id&back=$back&success=1");
             exit;
         }

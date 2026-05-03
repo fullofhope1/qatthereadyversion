@@ -19,8 +19,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'expense_date' => !empty($_POST['expense_date']) ? $_POST['expense_date'] : date('Y-m-d'),
             'description' => $_POST['description'],
             'amount' => $_POST['amount'],
+            'payment_method' => $_POST['payment_method'] ?? 'Cash',
             'category' => $_POST['category'],
-            'staff_id' => !empty($_POST['staff_id']) ? $_POST['staff_id'] : null,
+            'staff_id' => ($_POST['category'] === 'Staff') && !empty($_POST['staff_id']) ? (int)$_POST['staff_id'] : null,
+            'provider_id' => ($_POST['category'] === 'تسديد مورد') && !empty($_POST['provider_id']) ? (int)$_POST['provider_id'] : null,
             'created_by' => $_SESSION['user_id']
         ];
 

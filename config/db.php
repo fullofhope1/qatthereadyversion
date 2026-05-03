@@ -8,7 +8,7 @@ if ($is_localhost) {
     $servername = "localhost";
     $username = "root";
     $password = "";
-    $dbname = "qat_erp"; // تأكد أن هذا هو اسم قاعدة البيانات في XAMPP لديك
+    $dbname = "qat_erp";
 } else {
     // Live Server Credentials (بيانات InfinityFree الجديدة)
     $servername = "sql308.infinityfree.com";
@@ -22,9 +22,15 @@ date_default_timezone_set('Asia/Aden');
 try {
     $pdo = new PDO("mysql:host=$servername;dbname=$dbname;charset=utf8", $username, $password);
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+    $pdo->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
     $pdo->setAttribute(PDO::ATTR_EMULATE_PREPARES, false);
     $pdo->exec("SET time_zone = '+03:00'");
 } catch (PDOException $e) {
-    // نصيحة: في السيرفر الحي، يفضل عدم إظهار الخطأ بالتفصيل للمستخدم، لكن حالياً سنبقيها للتأكد من نجاح الاتصال
-    die("Database Connection Failed: " . $e->getMessage());
+    // In production, log error to file and show generic message
+    error_log("DB Connection Error: " . $e->getMessage());
+    if ($is_localhost) {
+        die("Database Connection Failed: " . $e->getMessage());
+    } else {
+        die("عذراً، حدث خطأ فني أثناء الاتصال بقاعدة البيانات. يرجى المحاولة لاحقاً.");
+    }
 }

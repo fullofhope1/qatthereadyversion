@@ -5,6 +5,21 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
+// Resolve Obfuscated URL Parameters
+UrlHelper::resolveParams();
+
+// Handle Midnight Auto-Close logic
+$todayDate = date('Y-m-d');
+if (!isset($_SESSION['last_autoclose_check']) || $_SESSION['last_autoclose_check'] !== $todayDate) {
+    try {
+        require_once __DIR__ . '/auto_close.php';
+        trigger_auto_closing($pdo);
+        $_SESSION['last_autoclose_check'] = $todayDate;
+    } catch (Exception $e) {
+        // Silently fail or log
+    }
+}
+
 // HTTP Security Headers
 header('X-Content-Type-Options: nosniff');
 header('X-Frame-Options: DENY');
@@ -36,7 +51,7 @@ if (isset($_SESSION['user_id']) && $_SESSION['role'] === 'user' && !in_array($cu
 }
 
 // For Admins -> Restrict access to some pages if not super_admin
-$admin_allowed_pages = ['sourcing.php', 'providers.php', 'expenses.php', 'admin_report.php', 'settings.php', 'logout.php', 'dashboard.php', 'refunds.php', 'manage_ads.php', 'manage_products.php', 'staff.php', 'staff_details.php'];
+$admin_allowed_pages = ['sourcing.php', 'providers.php', 'provider_statements.php', 'expenses.php', 'admin_report.php', 'settings.php', 'logout.php', 'dashboard.php', 'refunds.php', 'manage_ads.php', 'manage_products.php', 'staff.php', 'staff_details.php', 'staff_statements.php', 'attendance.php'];
 if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin' && !in_array($current_page, $admin_allowed_pages) && !in_array($current_page, $public_pages)) {
     header("Location: access_denied.php");
     exit;
@@ -96,11 +111,16 @@ if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
     <!-- Bootstrap 5 JS (loaded in head to ensure it's ready before any page scripts) -->
     <script src="public/js/bootstrap.bundle.min.js"></script>
     <!-- FontAwesome -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.2/css/all.min.css">
     <!-- Animate.css -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
     <!-- Driver.js for Interactive Tour -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/driver.js@0.9.8/dist/driver.min.css">
+
+    <link rel="icon" type="image/jpeg" href="logo.jpg">
+    <link rel="apple-touch-icon" href="logo.jpg">
+    <meta name="theme-color" content="#1a1a1a">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
     <link rel="stylesheet" href="public/css/style.css">
     <style>
@@ -123,6 +143,7 @@ if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
         .brand-text {
             background: var(--brand-gradient);
             -webkit-background-clip: text;
+            background-clip: text;
             -webkit-text-fill-color: transparent;
             font-weight: 900;
         }
@@ -151,30 +172,27 @@ if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
             }
         }
 
-        /* Print logic */
+        /* Print logic - Corrected to avoid hiding icons in normal view */
         @media print {
-            body { background: white !important; color: black !important; }
-            .no-print, .btn, .navbar, .nav, .breadcrumb, .alert, .no-print * { 
+            body { background: white !important; color: black !important; padding: 0 !important; }
+            .no-print, .btn, .navbar, .nav, .breadcrumb, .alert, .no-print *, .filter-pill-container, .report-card-header { 
                 display: none !important; 
                 height: 0 !important;
                 margin: 0 !important;
                 padding: 0 !important;
             }
-            .card { border: none !important; box-shadow: none !important; background: transparent !important; }
+            .card { border: none !important; box-shadow: none !important; background: transparent !important; overflow: visible !important; }
             .container-fluid, .container { width: 100% !important; padding: 0 !important; margin: 0 !important; max-width: 100% !important; }
             
             .print-header { display: block !important; text-align: center; margin-bottom: 30px; border-bottom: 2px solid #000; padding-bottom: 10px; }
             .print-header h1 { font-size: 24pt; font-weight: 900; margin-bottom: 5px; }
-            .print-header p { font-size: 10pt; color: #555; }
             
             table { width: 100% !important; border-collapse: collapse !important; font-size: 10pt !important; }
-            th, td { border: 1px solid #ddd !important; padding: 8px !important; }
-            th { background-color: #f8f9fa !important; -webkit-print-color-adjust: exact; }
-            .text-danger { color: #dc3545 !important; }
-            .text-success { color: #198754 !important; }
+            th, td { border: 1px solid #ddd !important; padding: 8px !important; color: black !important; }
+            th { background-color: #f8f9fa !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
             .badge { border: 1px solid #ccc !important; color: black !important; background: transparent !important; }
             
-            @page { size: A4; margin: 1.5cm; }
+            @page { size: A4; margin: 1cm; }
         }
         
         .print-header { display: none; }
@@ -253,20 +271,21 @@ if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-
                     <?php if (isset($_SESSION['user_id']) && $_SESSION['role'] === 'admin'): ?>
                         <!-- Admin: Sourcing + Expenses + Staff -->
                         <?php
                         // Helper for admin active nav
-                        function adminNavClass($page, $current, $color = 'warning')
-                        {
-                            $base = "nav-link text-{$color} fw-bold position-relative";
-                            if ($page === $current) $base .= " border-bottom border-{$color} border-3 bg-white bg-opacity-10 rounded px-2";
-                            return $base;
+                        if (!function_exists('adminNavClass')) {
+                            function adminNavClass($page, $current, $color = 'warning')
+                            {
+                                $base = "nav-link text-{$color} fw-bold position-relative";
+                                if ($page === $current) $base .= " border-bottom border-{$color} border-3 bg-white bg-opacity-10 rounded px-2";
+                                return $base;
+                            }
                         }
                         ?>
                         <li class="nav-item">
-                            <a class="<?= adminNavClass('sourcing.php', $current_page, 'warning') ?>" href="sourcing.php">
+                            <a class="<?= adminNavClass('sourcing.php', $current_page, 'warning') ?>" href="<?= Router::getUrl('sourcing.php') ?>">
                                 <i class="fas fa-truck-loading me-1"></i> التوريد
                                 <?php if ($admin_sourcing_badge > 0): ?>
                                     <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size:0.65rem;"><?= $admin_sourcing_badge ?></span>
@@ -274,12 +293,17 @@ if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="<?= adminNavClass('providers.php', $current_page, 'white') ?>" href="providers.php">
+                            <a class="<?= adminNavClass('providers.php', $current_page, 'white') ?>" href="<?= Router::getUrl('providers.php') ?>">
                                 <i class="fas fa-users-cog me-1"></i> الرعية
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="<?= adminNavClass('expenses.php', $current_page, 'info') ?>" href="expenses.php">
+                            <a class="<?= adminNavClass('provider_statements.php', $current_page, 'white') ?>" href="<?= Router::getUrl('provider_statements.php') ?>">
+                                <i class="fas fa-file-invoice me-1"></i> كشوفات الموردين
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="<?= adminNavClass('expenses.php', $current_page, 'info') ?>" href="<?= Router::getUrl('expenses.php') ?>">
                                 <i class="fas fa-wallet me-1"></i> المصاريف
                                 <?php if ($admin_expenses_badge > 0): ?>
                                     <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size:0.65rem;"><?= $admin_expenses_badge ?></span>
@@ -287,15 +311,16 @@ if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="<?= adminNavClass('staff.php', $current_page, 'light') ?>" href="staff.php">
+                            <a class="<?= adminNavClass('staff.php', $current_page, 'light') ?>" href="<?= Router::getUrl('staff.php') ?>">
                                 <i class="fas fa-user-hard-hat me-1"></i> الموظفين
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="<?= adminNavClass('admin_report.php', $current_page, 'success') ?>" href="admin_report.php">
+                            <a class="<?= adminNavClass('admin_report.php', $current_page, 'success') ?>" href="<?= Router::getUrl('admin_report.php') ?>">
                                 <i class="fas fa-chart-bar me-1"></i> التقارير
                             </a>
                         </li>
+
                     <?php elseif (isset($_SESSION['user_id']) && $_SESSION['role'] === 'super_admin'): ?>
                         <!-- Super Admin Menu -->
                         <?php
@@ -310,63 +335,63 @@ if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
                         $sub_role = $_SESSION['sub_role'] ?? 'full';
                         $is_full = ($sub_role === 'full');
                         ?>
+                        
                         <?php if ($is_full || $sub_role === 'receiving' || $sub_role === 'verifier'): ?>
                             <li class="nav-item"><a class="nav-link <?= navActive($home_link, $current_page) ?>" href="<?= $home_link ?>"><i class="fas fa-home me-1"></i> الرئيسية</a></li>
                         <?php endif; ?>
 
                         <?php if ($is_full || $sub_role === 'sales_debts' || $sub_role === 'seller'): ?>
-                            <li class="nav-item"><a class="nav-link <?= navActive('sales.php', $current_page) ?>" href="sales.php"><i class="fas fa-shopping-cart me-1"></i> المبيعات</a></li>
+                            <li class="nav-item"><a class="nav-link <?= navActive('sales.php', $current_page) ?>" href="<?= Router::getUrl('sales.php') ?>"><i class="fas fa-shopping-cart me-1"></i> المبيعات</a></li>
                         <?php endif; ?>
 
                         <?php if ($is_full || $sub_role === 'receiving' || $sub_role === 'verifier'): ?>
-                            <li class="nav-item"><a class="nav-link <?= navActive('purchases.php', $current_page) ?>" href="purchases.php"><i class="fas fa-truck me-1"></i> استلام المشتريات</a></li>
+                            <li class="nav-item"><a class="nav-link <?= navActive('purchases.php', $current_page) ?>" href="<?= Router::getUrl('purchases.php') ?>"><i class="fas fa-truck me-1"></i> استلام المشتريات</a></li>
+                            <li class="nav-item"><a class="nav-link <?= navActive('provider_statements.php', $current_page) ?>" href="<?= Router::getUrl('provider_statements.php') ?>"><i class="fas fa-file-invoice me-1"></i> كشوفات الموردين</a></li>
+                            <li class="nav-item"><a class="nav-link <?= navActive('staff_statements.php', $current_page) ?>" href="<?= Router::getUrl('staff_statements.php') ?>"><i class="fas fa-id-badge me-1"></i> كشوفات الموظفين</a></li>
                         <?php endif; ?>
 
-
                         <?php if ($is_full || $sub_role === 'sales_debts' || $sub_role === 'seller'): ?>
-                            <li class="nav-item"><a class="nav-link <?= navActive('customers.php', $current_page) ?>" href="customers.php"><i class="fas fa-users me-1"></i> العملاء</a></li>
-                            <li class="nav-item"><a class="nav-link <?= navActive('debts.php', $current_page) ?>" href="debts.php"><i class="fas fa-file-invoice-dollar me-1"></i> الديون</a></li>
+                            <li class="nav-item"><a class="nav-link <?= navActive('customers.php', $current_page) ?>" href="<?= Router::getUrl('customers.php') ?>"><i class="fas fa-users me-1"></i> العملاء</a></li>
+                            <li class="nav-item"><a class="nav-link <?= navActive('debts.php', $current_page) ?>" href="<?= Router::getUrl('debts.php') ?>"><i class="fas fa-file-invoice-dollar me-1"></i> الديون</a></li>
                         <?php endif; ?>
 
                         <?php if ($is_full): ?>
-                            <li class="nav-item"><a class="nav-link <?= navActive('refunds.php', $current_page) ?>" href="refunds.php"><i class="fas fa-hand-holding-usd me-1"></i> التعويضات</a></li>
-                            <li class="nav-item"><a class="nav-link <?= navActive('returns.php', $current_page) ?>" href="returns.php"><i class="fas fa-undo me-1"></i> المرتجعات</a></li>
+                            <li class="nav-item"><a class="nav-link <?= navActive('refunds.php', $current_page) ?>" href="<?= Router::getUrl('refunds.php') ?>"><i class="fas fa-hand-holding-usd me-1"></i> التعويضات</a></li>
+                            <li class="nav-item"><a class="nav-link <?= navActive('returns.php', $current_page) ?>" href="<?= Router::getUrl('returns.php') ?>"><i class="fas fa-undo me-1"></i> المرتجعات</a></li>
                         <?php endif; ?>
 
                         <?php if ($is_full || $sub_role === 'seller'): ?>
-                            <li class="nav-item"><a class="nav-link <?= navActive('staff.php', $current_page) ?>" href="staff.php"><i class="fas fa-user-tie me-1"></i> الموظفين</a></li>
+                            <li class="nav-item"><a class="nav-link <?= navActive('staff.php', $current_page) ?>" href="<?= Router::getUrl('staff.php') ?>"><i class="fas fa-user-tie me-1"></i> الموظفين</a></li>
                         <?php endif; ?>
 
                         <?php if ($is_full || $sub_role === 'receiving' || $sub_role === 'sales_debts' || $sub_role === 'seller'): ?>
-                            <li class="nav-item"><a class="nav-link <?= navActive('expenses.php', $current_page) ?>" href="expenses.php"><i class="fas fa-wallet me-1"></i> المصاريف</a></li>
+                            <li class="nav-item"><a class="nav-link <?= navActive('expenses.php', $current_page) ?>" href="<?= Router::getUrl('expenses.php') ?>"><i class="fas fa-wallet me-1"></i> المصاريف</a></li>
                         <?php endif; ?>
 
                         <?php if ($is_full || $sub_role === 'reports'): ?>
-                            <li class="nav-item"><a class="nav-link <?= navActive('unknown_transfers.php', $current_page) ?>" href="unknown_transfers.php"><i class="fas fa-question-circle me-1"></i> تحويلات مجهولة</a></li>
+                            <li class="nav-item"><a class="nav-link <?= navActive('unknown_transfers.php', $current_page) ?>" href="<?= Router::getUrl('unknown_transfers.php') ?>"><i class="fas fa-question-circle me-1"></i> تحويلات مجهولة</a></li>
                         <?php endif; ?>
 
-                          <!-- Removed manual leftovers management -->
-
                         <?php if ($is_full || $sub_role === 'sales_debts' || $sub_role === 'seller'): ?>
-                            <li class="nav-item"><a class="nav-link <?= navActive('sales_leftovers_1.php', $current_page) ?>" href="sales_leftovers_1.php"><i class="fas fa-recycle me-1"></i> بيع أول</a></li>
-                            <li class="nav-item"><a class="nav-link <?= navActive('sales_leftovers_2.php', $current_page) ?>" href="sales_leftovers_2.php"><i class="fas fa-history me-1"></i> بيع ثاني</a></li>
+                            <li class="nav-item"><a class="nav-link <?= navActive('sales_leftovers_1.php', $current_page) ?>" href="<?= Router::getUrl('sales_leftovers_1.php') ?>"><i class="fas fa-recycle me-1"></i> بيع أول</a></li>
+                            <li class="nav-item"><a class="nav-link <?= navActive('sales_leftovers_2.php', $current_page) ?>" href="<?= Router::getUrl('sales_leftovers_2.php') ?>"><i class="fas fa-history me-1"></i> بيع ثاني</a></li>
                         <?php endif; ?>
 
                         <?php if ($is_full): ?>
-                            <li class="nav-item"><a class="nav-link text-danger fw-bold <?= navActive('closing.php', $current_page) ?>" href="closing.php"><i class="fas fa-calendar-check me-1"></i> إغلاق اليومية</a></li>
+                            <li class="nav-item"><a class="nav-link text-danger fw-bold <?= navActive('closing.php', $current_page) ?>" href="<?= Router::getUrl('closing.php') ?>"><i class="fas fa-calendar-check me-1"></i> إغلاق اليومية</a></li>
                         <?php endif; ?>
 
                         <?php if ($is_full || $sub_role === 'reports' || $sub_role === 'accountant' || $sub_role === 'partner'): ?>
-                            <li class="nav-item"><a class="nav-link <?= navActive('reports.php', $current_page) ?>" href="reports.php"><i class="fas fa-chart-line me-1"></i> التقارير</a></li>
+                            <li class="nav-item"><a class="nav-link <?= navActive('reports.php', $current_page) ?>" href="<?= Router::getUrl('reports.php') ?>"><i class="fas fa-chart-line me-1"></i> التقارير</a></li>
                         <?php endif; ?>
 
                         <?php if ($is_full || $sub_role === 'accountant'): ?>
-                            <li class="nav-item"><a class="nav-link text-success fw-bold <?= navActive('whatsapp_statements.php', $current_page) ?>" href="whatsapp_statements.php"><i class="fab fa-whatsapp me-1"></i> واتساب</a></li>
+                            <li class="nav-item"><a class="nav-link text-success fw-bold <?= navActive('whatsapp_statements.php', $current_page) ?>" href="<?= Router::getUrl('whatsapp_statements.php') ?>"><i class="fab fa-whatsapp me-1"></i> واتساب</a></li>
                         <?php endif; ?>
 
-                        <?php if ($_SESSION['role'] === 'super_admin' && $is_full): ?>
-                            <li class="nav-item border-start ms-2 ps-2"><a class="nav-link text-info fw-bold <?= navActive('manage_ads.php', $current_page) ?>" href="manage_ads.php"><i class="fas fa-ad me-1"></i> الإعلانات</a></li>
-                            <li class="nav-item"><a class="nav-link text-info fw-bold <?= navActive('manage_products.php', $current_page) ?>" href="manage_products.php"><i class="fas fa-leaf me-1"></i> المنتجات</a></li>
+                        <?php if ($is_full): ?>
+                            <li class="nav-item border-start ms-2 ps-2"><a class="nav-link text-info fw-bold <?= navActive('manage_ads.php', $current_page) ?>" href="<?= Router::getUrl('manage_ads.php') ?>"><i class="fas fa-ad me-1"></i> الإعلانات</a></li>
+                            <li class="nav-item"><a class="nav-link text-info fw-bold <?= navActive('manage_products.php', $current_page) ?>" href="<?= Router::getUrl('manage_products.php') ?>"><i class="fas fa-leaf me-1"></i> المنتجات</a></li>
                         <?php endif; ?>
                     <?php endif; ?>
                 </ul>

@@ -45,13 +45,26 @@ class CustomerRepository extends BaseRepository
 
     public function incrementDebt($id, $amount)
     {
-        return $this->execute("UPDATE customers SET total_debt = total_debt + ? WHERE id = ?", [$amount, $id]);
+        // ✅ FIX #4: Recalculate from sales table to keep total_debt accurate
+        return $this->execute(
+            "UPDATE customers SET total_debt = (
+                SELECT COALESCE(SUM(price - paid_amount - COALESCE(refund_amount,0)), 0)
+                FROM sales WHERE customer_id = ? AND is_paid = 0 AND is_returned = 0
+            ) WHERE id = ?",
+            [$id, $id]
+        );
     }
 
     public function decrementDebt($id, $amount)
     {
-        // FIX #7: Use GREATEST(0,...) to prevent total_debt from going negative
-        return $this->execute("UPDATE customers SET total_debt = GREATEST(0, total_debt - ?) WHERE id = ?", [$amount, $id]);
+        // ✅ FIX #4: Recalculate from sales table to keep total_debt accurate
+        return $this->execute(
+            "UPDATE customers SET total_debt = (
+                SELECT COALESCE(SUM(price - paid_amount - COALESCE(refund_amount,0)), 0)
+                FROM sales WHERE customer_id = ? AND is_paid = 0 AND is_returned = 0
+            ) WHERE id = ?",
+            [$id, $id]
+        );
     }
 
     public function getDebtBalance($id)

@@ -173,7 +173,15 @@ foreach ($preview as $p) {
                 </table>
 
                 <form action="requests/close_day.php" method="POST">
+                    <?php CsrfHelper::insertTokenField(); ?>
                     <input type="hidden" name="date" value="<?= $today ?>">
+                    
+                    <!-- Test Mode Bypass for Developer -->
+                    <div class="form-check form-switch mb-3 d-flex justify-content-center gap-2" dir="rtl">
+                        <input class="form-check-input" type="checkbox" name="test_mode" id="testMode">
+                        <label class="form-check-label small text-muted" for="testMode">وضع الاختبار (يسمح بالإغلاق المتكرر للمطور فقط)</label>
+                    </div>
+
                     <button type="submit" class="btn btn-danger w-100 btn-lg mb-3" onclick="return confirm('هل أنت متأكد من إغلاق اليوم (الوردية)؟ سيتم ترحيل جميع البضاعة الجاهزة للمراحل التالية.');">إغلاق الوردية وترحيل البضاعة</button>
                 </form>
             </div>

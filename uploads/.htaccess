@@ -1,0 +1,11 @@
+# Disable script execution in uploads directory
+<FilesMatch "\.(php|php3|php4|php5|phtml|pl|py|jsp|asp|htm|html|shtml|sh|cgi)$">
+    Order deny,allow
+    Deny from all
+</FilesMatch>
+
+# Allow viewing of media files
+<FilesMatch "\.(jpg|jpeg|png|gif|mp4|mov|webp|pdf)$">
+    Order allow,deny
+    Allow from all
+</FilesMatch>

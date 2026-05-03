@@ -42,16 +42,9 @@ if (isset($_GET['success']) && isset($_GET['sale_id'])) {
         $totalDebt = number_format($saleReceipt['cust_total_debt']);
         $weightOrUnits = ($saleReceipt['unit_type'] === 'weight') ? ($saleReceipt['weight_grams'] . ' جرام') : ($saleReceipt['quantity_units'] . ' ' . $saleReceipt['unit_type']);
         
-        $msg = "إشعار من القادري وماجد لأجود أنواع القات: " . $todayAr . "\n";
-        $msg .= "عليكم المبلغ: " . $saleAmount . " ريال\n";
-        $msg .= "نوع القات: " . $saleReceipt['type_name'] . " / " . $weightOrUnits . "\n";
-        $msg .= "الإجمالي عليكم: " . $totalDebt . " ريال\n\n";
-        $msg .= "ارقام حساباتنا:\n";
-        $msg .= "جيب: " . $acc['jeeb'] . "\n";
-        $msg .= "جوالي: " . $acc['jawwali'] . "\n";
-        $msg .= "كريمي: " . $acc['kuraimi'];
+        $msg = "إشعار من القادري وماجد: عليك مبلغ " . $saleAmount . " ريال. " . "حساباتنا: جيب/جوالي " . $acc['jawwali'] . " كريمي " . $acc['kuraimi'];
         
-        $saleReceipt['wa_url'] = "https://wa.me/" . $saleReceipt['cust_phone'] . "?text=" . rawurlencode($msg);
+        $saleReceipt['wa_url'] = "https://wa.me/" . $saleReceipt['cust_phone'] . "?text=" . str_replace(' ', '%20', $msg);
     }
 }
 ?>
@@ -904,7 +897,13 @@ if (isset($_GET['success']) && isset($_GET['sale_id'])) {
             const a = document.createElement('a');
             a.className = 'list-group-item list-group-item-action text-end';
             a.style.cursor = 'pointer';
-            a.innerHTML = `<b>${c.name}</b> <small>${c.phone || ''}</small>`;
+            
+            const debtVal = parseFloat(c.total_debt || 0);
+            const debtText = debtVal > 0 
+                ? `<br><span class="badge bg-danger-subtle text-danger border border-danger-subtle">مديون: ${debtVal.toLocaleString()} ريال</span>` 
+                : '';
+                
+            a.innerHTML = `<b>${c.name}</b> <small class="text-muted">${c.phone || ''}</small>${debtText}`;
             a.onclick = () => nextStep(3, { id: c.id, name: c.name });
             div.appendChild(a);
         });

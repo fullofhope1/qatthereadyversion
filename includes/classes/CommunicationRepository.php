@@ -10,8 +10,8 @@ class CommunicationRepository extends BaseRepository
 
     public function createUnknownTransfer(array $data)
     {
-        $sql = "INSERT INTO unknown_transfers (transfer_date, amount, currency, receipt_number, sender_name, notes, created_at) 
-                VALUES (:transfer_date, :amount, :currency, :receipt_number, :sender_name, :notes, NOW())";
+        $sql = "INSERT INTO unknown_transfers (transfer_date, amount, currency, receipt_number, sender_name, receiver_name, notes, created_at) 
+                VALUES (:transfer_date, :amount, :currency, :receipt_number, :sender_name, :receiver_name, :notes, NOW())";
         return $this->execute($sql, $data);
     }
 
@@ -50,7 +50,7 @@ class CommunicationRepository extends BaseRepository
                 ':cid' => $customerId,
                 ':amt' => $transfer['amount'],
                 ':pdate' => $transfer['transfer_date'],
-                ':notes' => "محولة من الحوالات المجهولة - سند رقم: " . $transfer['receipt_number']
+                ':notes' => "محولة من الحوالات المجهولة - سند رقم: " . $transfer['receipt_number'] . " - المستلم: " . $transfer['receiver_name']
             ]);
 
             // 2. Update customer balance

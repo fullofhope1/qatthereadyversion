@@ -43,13 +43,13 @@ class DailyCloseRepository extends BaseRepository
         $surplusUnits = 0;
         if ($l['unit_type'] === 'weight') {
             $sold = (float)$this->fetchColumn(
-                "SELECT COALESCE(SUM(COALESCE(weight_kg, weight_grams/1000)), 0) FROM sales WHERE leftover_id = ? AND is_returned = 0",
+                "SELECT COALESCE(SUM(COALESCE(weight_kg, weight_grams/1000) - COALESCE(returned_kg, 0)), 0) FROM sales WHERE leftover_id = ? AND is_returned = 0",
                 [$leftoverId]
             ) ?: 0;
             $surplusKg = max(0, (float)$l['weight_kg'] - $sold);
         } else {
             $sold = (int)$this->fetchColumn(
-                "SELECT COALESCE(SUM(quantity_units), 0) FROM sales WHERE leftover_id = ? AND is_returned = 0",
+                "SELECT COALESCE(SUM(quantity_units - COALESCE(returned_units, 0)), 0) FROM sales WHERE leftover_id = ? AND is_returned = 0",
                 [$leftoverId]
             ) ?: 0;
             $surplusUnits = max(0, (int)$l['quantity_units'] - $sold);
@@ -75,7 +75,7 @@ class DailyCloseRepository extends BaseRepository
 
         if ($p['unit_type'] === 'weight') {
             $stmtW = $this->pdo->prepare("SELECT 
-                (SELECT SUM(COALESCE(weight_kg, weight_grams/1000)) FROM sales WHERE purchase_id = ?) as sold,
+                (SELECT SUM(COALESCE(weight_kg, weight_grams/1000) - COALESCE(returned_kg, 0)) FROM sales WHERE purchase_id = ? AND is_returned = 0) as sold,
                 (SELECT SUM(weight_kg) FROM leftovers WHERE purchase_id = ? AND status IN ('Dropped', 'Transferred_Next_Day', 'Auto_Momsi', 'Momsi_Day_1', 'Momsi_Day_2')) as managed");
             $stmtW->execute([$purchaseId, $purchaseId]);
             $row = $stmtW->fetch();
@@ -83,7 +83,7 @@ class DailyCloseRepository extends BaseRepository
             $surplusUnits = 0;
         } else {
             $stmtU = $this->pdo->prepare("SELECT 
-                (SELECT SUM(quantity_units) FROM sales WHERE purchase_id = ?) as sold,
+                (SELECT SUM(quantity_units - COALESCE(returned_units, 0)) FROM sales WHERE purchase_id = ? AND is_returned = 0) as sold,
                 (SELECT SUM(quantity_units) FROM leftovers WHERE purchase_id = ? AND status IN ('Dropped', 'Transferred_Next_Day', 'Auto_Momsi', 'Momsi_Day_1', 'Momsi_Day_2')) as managed");
             $stmtU->execute([$purchaseId, $purchaseId]);
             $row = $stmtU->fetch();
@@ -131,9 +131,9 @@ class DailyCloseRepository extends BaseRepository
     public function getSoldAndManagedForPurchase($purchaseId)
     {
         $stmt = $this->pdo->prepare("SELECT 
-            (SELECT COALESCE(SUM(COALESCE(weight_kg, weight_grams/1000)), 0) FROM sales WHERE purchase_id = ? AND is_returned = 0) as sold_kg,
+            (SELECT COALESCE(SUM(COALESCE(weight_kg, weight_grams/1000) - COALESCE(returned_kg, 0)), 0) FROM sales WHERE purchase_id = ? AND is_returned = 0) as sold_kg,
             (SELECT COALESCE(SUM(weight_kg), 0) FROM leftovers WHERE purchase_id = ? AND status IN ('Dropped', 'Auto_Dropped', 'Transferred_Next_Day', 'Auto_Momsi', 'Momsi_Day_1', 'Momsi_Day_2', 'Closed')) as managed_kg,
-            (SELECT COALESCE(SUM(quantity_units), 0) FROM sales WHERE purchase_id = ? AND is_returned = 0) as sold_units,
+            (SELECT COALESCE(SUM(quantity_units - COALESCE(returned_units, 0)), 0) FROM sales WHERE purchase_id = ? AND is_returned = 0) as sold_units,
             (SELECT COALESCE(SUM(quantity_units), 0) FROM leftovers WHERE purchase_id = ? AND status IN ('Dropped', 'Auto_Dropped', 'Transferred_Next_Day', 'Auto_Momsi', 'Momsi_Day_1', 'Momsi_Day_2', 'Closed')) as managed_units");
         $stmt->execute([$purchaseId, $purchaseId, $purchaseId, $purchaseId]);
         $row = $stmt->fetch(PDO::FETCH_ASSOC);

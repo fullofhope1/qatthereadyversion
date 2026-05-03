@@ -1,13 +1,16 @@
 <?php
 // sourcing.php - Enhanced Multi-step Wizard
 require 'config/db.php';
-include 'includes/header.php';
 
 // Strict Check: Sourcing is NOT for Super Admins
-if ($_SESSION['role'] === 'super_admin') {
+// Must happen BEFORE including header.php to avoid "headers already sent"
+session_start();
+if (isset($_SESSION['role']) && $_SESSION['role'] === 'super_admin') {
     header("Location: purchases.php");
     exit;
 }
+
+include 'includes/header.php';
 
 // Fetch Types & Providers via Clean Architecture
 $productRepo = new ProductRepository($pdo);

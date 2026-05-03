@@ -14,6 +14,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'currency'       => $_POST['currency'] ?? 'YER',
         'receipt_number' => $_POST['receipt_number'],
         'sender_name'    => $_POST['sender_name'],
+        'receiver_name'  => $_POST['receiver_name'],
         'notes'          => $_POST['notes'] ?? ''
     ];
 

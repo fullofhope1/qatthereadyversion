@@ -1,381 +1,157 @@
 <?php
-// includes/reports/view_summary.php
-?>
-<div class="d-flex justify-content-end mb-4 no-print">
-    <a href="?view=Printable&report_type=<?= $reportType ?>&date=<?= $date ?>&month=<?= $month ?>&year=<?= $year ?>" class="btn btn-dark rounded-pill px-4 shadow-sm">
-        <i class="fas fa-print me-2 text-warning"></i> طباعة التقرير الشامل
-    </a>
-</div>
-
-<?php
-// includes/reports/view_summary.php
-
+// 1. DATA AGGREGATION
+// $overview already contains totals (real_profit, total_sales, etc.) from reports.php
+$totals = $overview; // Passed from reports.php via $service->getOverviewData()
 $breakdowns = $service->getSummaryBreakdowns($reportType, $date, $month, $year);
-$salesSummary = $breakdowns['sales'];
-$leftoversSummary = $breakdowns['leftovers'];
-$depositsRaw = $breakdowns['deposits'];
+$salesSummary = $breakdowns['sales']; // Contains cash_sales, transfer_sales, momsi1_sales, momsi2_sales
+$cashSummary = $service->getCashSummary($reportType, $date, $month, $year, $report_user_id); 
 
-$depositsYER = $depositsRaw['YER'] ?? 0;
-$depositsSAR = $depositsRaw['SAR'] ?? 0;
-$depositsUSD = $depositsRaw['USD'] ?? 0;
-
-// 4. REFUNDS DETAIL
-$cashRefunds = 0;
-$debtRefunds = 0;
-foreach ($listRefunds as $r) {
-    if ($r['refund_type'] === 'Cash') {
-        $cashRefunds += $r['amount'];
-    } else {
-        $debtRefunds += $r['amount'];
-    }
-}
-$listTotalRefunds = $cashRefunds + $debtRefunds;
-// Use correct GROSS cash sales for inflow calculation (avoiding double deduction of cash refunds)
-$grossCashSales = $cashSummary['cash_sales'] ?? 0;
-$totalUnknownTransfers = (float)($salesSummary['total_unknown_transfers'] ?? 0);
-$totalInflow = $grossCashSales + $collectedPayments + $totalUnknownTransfers;
-$totalOutflow = $totalExpenses + $cashRefunds + $depositsYER;
-$remainingCash = $totalInflow - $totalOutflow;
-
-$totalDroppedKg  = ($leftoversSummary['total_dropped_kg'] ?? 0);
-$momsDay1Kg     = ($leftoversSummary['moms_day1_kg'] ?? 0);
-$momsDay2Kg     = ($leftoversSummary['moms_day2_kg'] ?? 0);
+// Calculation for General Total (Drawer Cash Result)
+// This is now calculated centrally in ReportService::getCashSummary
+$cashInHandResult = $cashSummary['remaining_cash'] ?? 0;
 ?>
 
-<style>
-    @keyframes fadeInUp {
-        from {
-            opacity: 0;
-            transform: translateY(20px);
-        }
-
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
-    }
-
-    @keyframes pulse-soft {
-        0% {
-            transform: scale(1);
-        }
-
-        50% {
-            transform: scale(1.02);
-        }
-
-        100% {
-            transform: scale(1);
-        }
-    }
-
-    .summary-card {
-        border-radius: 24px;
-        transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
-        border: 1px solid rgba(255, 255, 255, 0.3) !important;
-        background: rgba(255, 255, 255, 0.8) !important;
-        backdrop-filter: blur(15px);
-        animation: fadeInUp 0.6s ease-out both;
-    }
-
-    .summary-card:hover {
-        transform: translateY(-8px);
-        box-shadow: var(--royal-shadow) !important;
-        background: #fff !important;
-    }
-
-    .icon-box {
-        width: 60px;
-        height: 60px;
-        border-radius: 18px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 1.8rem;
-        margin-bottom: 1.5rem;
-        box-shadow: 0 8px 15px rgba(0, 0, 0, 0.05);
-    }
-
-    .text-value {
-        font-size: 2.2rem;
-        font-weight: 900;
-        margin-bottom: 0.25rem;
-        letter-spacing: -1px;
-    }
-
-    .progress-micro {
-        height: 6px;
-        border-radius: 10px;
-        margin: 1.25rem 0;
-        background-color: rgba(0, 0, 0, 0.05);
-    }
-
-    .badge-premium {
-        padding: 0.5rem 1rem;
-        border-radius: 50px;
-        font-weight: 700;
-        font-size: 0.75rem;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-    }
-</style>
-
-<div class="row g-4 mb-4">
-    <!-- Sales Overview -->
-    <div class="col-md-4">
-        <div class="card h-100 shadow-sm summary-card border-top border-warning border-5">
-            <div class="card-body p-4">
-                <div class="icon-box bg-warning-subtle text-warning">
-                    <i class="fas fa-shopping-basket"></i>
+<div class="container py-3">
+    <!-- Final Card Summary -->
+    <div class="card border-0 shadow-lg" style="border-radius: 20px; overflow: hidden; background: #f8f9fa;">
+        <div class="card-header bg-dark text-white p-4 border-0">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h3 class="mb-1 fw-bold text-warning"><i class="fas fa-file-invoice-dollar me-2"></i> المحصلة المالية النهائية</h3>
+                    <p class="mb-0 opacity-75 small">تقرير <?= ($reportType === 'Daily' ? 'يومي' : ($reportType === 'Monthly' ? 'شهري' : 'سنوي')) ?> | التاريخ: <?= $date ?: 'محدد' ?></p>
                 </div>
-                <h6 class="text-muted fw-bold text-uppercase small mb-3">صافي المبيعات (Net Sales)</h6>
-                <div class="text-value text-dark"><?= number_format($totalSales) ?> <small class="fs-6 fw-normal">ريال</small></div>
-                <div class="small fw-bold text-muted mb-2">
-                    المبيعات الإجمالية: <span class="text-dark"><?= number_format($grossSales) ?></span>
-                </div>
-                <?php if ($totalRefunds > 0): ?>
-                <div class="small fw-bold text-danger mb-2" title="المرتجعات والتعويضات المخصومة">
-                    المرتجعات والتعويضات: -<?= number_format($totalRefunds) ?> <i class="fas fa-undo fs-xs"></i>
-                </div>
-                <?php endif; ?>
-
-                <div class="mt-4 pt-3 border-top">
-                    <div class="d-flex justify-content-between mb-2 small">
-                        <span class="text-muted">مبيعات نقدي:</span>
-                        <span class="fw-bold"><?= number_format($salesSummary['cash_sales']) ?></span>
-                    </div>
-                    <div class="progress progress-micro">
-                        <div class="progress-bar bg-warning" style="width: <?= $totalSales > 0 ? ($salesSummary['cash_sales'] / $totalSales * 100) : 0 ?>%"></div>
-                    </div>
-                    <div class="d-flex justify-content-between mb-2 small">
-                        <span class="text-muted">مبيعات آجل:</span>
-                        <span class="fw-bold"><?= number_format($salesSummary['debt_sales']) ?></span>
-                    </div>
-                    <div class="progress progress-micro">
-                        <div class="progress-bar bg-danger" style="width: <?= $totalSales > 0 ? ($salesSummary['debt_sales'] / $totalSales * 100) : 0 ?>%"></div>
-                    </div>
-                    <div class="d-flex justify-content-between small">
-                        <span class="text-muted">حوالات:</span>
-                        <span class="fw-bold"><?= number_format($salesSummary['transfer_sales']) ?></span>
-                    </div>
+                <div class="text-end no-print">
+                     <button onclick="window.print()" class="btn btn-warning rounded-pill px-4 fw-bold shadow-sm">
+                        <i class="fas fa-print me-2"></i> طباعة التقرير
+                     </button>
                 </div>
             </div>
         </div>
-    </div>
+        
+        <div class="card-body p-0 bg-white">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0" style="direction: rtl;">
+                    <thead class="bg-light">
+                        <tr class="text-muted small uppercase">
+                            <th class="ps-4 py-3 fw-bold" style="width: 65%">البيـــــــــــــــــــــــــــــــــان المالي</th>
+                            <th class="pe-4 py-3 text-end fw-bold">القيمة (ريال)</th>
+                        </tr>
+                    </thead>
+                    <tbody class="fs-6">
+                        <!-- 1. CASH SALES -->
+                        <tr class="clickable-row" onclick="showDetails('Sales', 'إجمالي البيع نقداً')" style="cursor: pointer;">
+                            <td class="ps-4 py-3"><i class="fas fa-money-bill-alt text-success me-3"></i> 1. إجمالي البيع نقداً</td>
+                            <td class="pe-4 py-3 text-end fw-bold text-dark fs-5"><?= number_format($cashSummary['cash_sales']) ?></td>
+                        </tr>
+                        
+                        <!-- 2. CASH COLLECTIONS -->
+                        <tr class="bg-light bg-opacity-50 clickable-row" onclick="showDetails('Payments', 'إجمالي الواصل نقداً')" style="cursor: pointer;">
+                            <td class="ps-4 py-3"><i class="fas fa-hand-holding-usd text-primary me-3"></i> 2. إجمالي الواصل (دين مسدد) نقداً</td>
+                            <td class="pe-4 py-3 text-end fw-bold text-primary fs-5"><?= number_format($cashSummary['wasel_cash']) ?></td>
+                        </tr>
+                        
+                        <!-- 3. TRANSFER SALES -->
+                        <tr class="clickable-row" onclick="showDetails('Sales', 'إجمالي البيع حوالات')" style="cursor: pointer;">
+                            <td class="ps-4 py-3"><i class="fas fa-university text-info me-3"></i> 3. إجمالي البيع حوالات</td>
+                            <td class="pe-4 py-3 text-end fw-bold text-info fs-5"><?= number_format($cashSummary['transfer_sales']) ?></td>
+                        </tr>
+                        
+                        <!-- 4. TRANSFER COLLECTIONS -->
+                        <tr class="bg-light bg-opacity-50 clickable-row" onclick="showDetails('Payments', 'إجمالي الواصل حوالات')" style="cursor: pointer;">
+                            <td class="ps-4 py-3"><i class="fas fa-exchange-alt text-info me-3"></i> 4. إجمالي الواصل (دين مسدد) حوالات</td>
+                            <td class="pe-4 py-3 text-end fw-bold text-info fs-5"><?= number_format($cashSummary['wasel_transfer']) ?></td>
+                        </tr>
 
-    <!-- Inflow Overview -->
-    <div class="col-md-4">
-        <div class="card h-100 shadow-sm summary-card border-top border-success border-5">
-            <div class="card-body p-4">
-                <div class="icon-box bg-success-subtle text-success">
-                    <i class="fas fa-arrow-down"></i>
-                </div>
-                <h6 class="text-muted fw-bold text-uppercase small mb-3">النقد الداخل (المستلم)</h6>
-                <div class="text-value text-success"><?= number_format($totalInflow) ?> <small class="fs-6 fw-normal">ريال</small></div>
+                        <!-- 5. GLOBAL DEBT -->
+                        <tr class="border-top border-4 border-white">
+                            <td class="ps-4 py-3 bg-danger bg-opacity-10 fw-bold text-danger"><i class="fas fa-users-cog me-3"></i> 5. إجمالي المديونية (كافة العملاء)</td>
+                            <td class="pe-4 py-3 text-end fw-bold text-danger fs-5 bg-danger bg-opacity-10"><?= number_format($cashSummary['total_global_debt']) ?></td>
+                        </tr>
 
-                <div class="mt-4 pt-3 border-top">
-                    <div class="d-flex justify-content-between mb-3">
-                        <span class="text-muted">المبيعات النقدية (قبل المرتجع):</span>
-                        <span class="fw-bold"><?= number_format($grossCashSales) ?></span>
-                    </div>
-                    <div class="d-flex justify-content-between mb-3">
-                        <span class="text-muted">سداد ديون قديمة:</span>
-                        <span class="fw-bold text-primary">+ <?= number_format($collectedPayments) ?></span>
-                    </div>
-                    <?php if ($totalUnknownTransfers > 0): ?>
-                    <div class="d-flex justify-content-between mb-3">
-                        <span class="text-muted">تحويلات مجهولة مستلمة:</span>
-                        <span class="fw-bold text-warning">+ <?= number_format($totalUnknownTransfers) ?></span>
-                    </div>
-                    <?php endif; ?>
-                    <div class="bg-light p-2 rounded text-center small text-muted">
-                        <i class="fas fa-info-circle me-1"></i> هذا المبلغ يمثل إجمالي الكاش الذي دخل الصندوق
-                    </div>
-                </div>
+                        <!-- 6. MOMSI SALES -->
+                        <tr>
+                            <td class="ps-4 py-3"><i class="fas fa-leaf text-success me-3"></i> 6. إجمالي بيع القات الممسي أول</td>
+                            <td class="pe-4 py-3 text-end fw-bold text-dark"><?= number_format($salesSummary['momsi1_sales'] ?? 0) ?></td>
+                        </tr>
+                        <tr>
+                            <td class="ps-4 py-3"><i class="fas fa-leaf text-warning me-3"></i> 7. إجمالي بيع القات الممسي الثاني</td>
+                            <td class="pe-4 py-3 text-end fw-bold text-dark"><?= number_format($salesSummary['momsi2_sales'] ?? 0) ?></td>
+                        </tr>
+
+                        <!-- 7. REFUNDS & COMPENSATIONS -->
+                        <tr class="border-top border-2">
+                            <td class="ps-4 py-3"><i class="fas fa-undo text-danger me-3"></i> 8. إجمالي المرتجعات</td>
+                            <td class="pe-4 py-3 text-end fw-bold text-danger"><?= number_format($cashSummary['total_refunds']) ?></td>
+                        </tr>
+                        <tr>
+                            <td class="ps-4 py-3"><i class="fas fa-gift text-dark me-3"></i> 9. إجمالي التعويضات</td>
+                            <td class="pe-4 py-3 text-end fw-bold text-dark"><?= number_format($cashSummary['total_compensations']) ?></td>
+                        </tr>
+
+                        <!-- 8. EXPENSES -->
+                        <tr class="bg-light clickable-row" onclick="showDetails('Expenses', 'إجمالي المصاريف')" style="cursor: pointer;">
+                            <td class="ps-4 py-3 fw-bold text-danger"><i class="fas fa-minus-circle me-3"></i> 10. إجمالي الخرج (المصاريف)</td>
+                            <td class="pe-4 py-3 text-end fw-bold text-danger"><?= number_format($cashSummary['total_expenses']) ?></td>
+                        </tr>
+
+                        <!-- 9. PROVIDER PAYMENTS (Hidden as per user request - handled in statements) -->
+                        <?php /*
+                        <tr class="bg-light border-top">
+                            <td class="ps-4 py-3 fw-bold text-primary"><i class="fas fa-truck-loading me-3"></i> 11. إجمالي المبالغ المسلمة للموردين (تسديد)</td>
+                            <td class="pe-4 py-3 text-end fw-bold text-primary"><?= number_format($totals['total_provider_payments'] ?? 0) ?></td>
+                        </tr>
+                        */ ?>
+                        <!-- 11. INVENTORY VALUE -->
+                        <tr class="bg-warning bg-opacity-10 border-top border-4 border-white">
+                            <td class="ps-4 py-3 fw-bold text-dark"><i class="fas fa-boxes me-3 text-warning"></i> 11. إجمالي قيمة المخزون الحالي (بضاعة لم تُبع)</td>
+                            <td class="pe-4 py-3 text-end fw-bold text-dark fs-5"><?= number_format($totals['inventory_value'] ?? 0) ?></td>
+                        </tr>
+
+                        <!-- 10. PROFIT -->
+                        <tr class="bg-success text-white border-top border-4 border-white shadow-sm">
+                            <td class="ps-4 py-4 fw-bold fs-5"><i class="fas fa-chart-line me-3"></i> 12. صافي الربح أو الخسارة الحقيقي</td>
+                            <td class="pe-4 py-4 text-end fw-bold fs-3"><?= number_format($totals['real_profit']) ?></td>
+                        </tr>
+
+                        <!-- 11. DEPOSITS -->
+                        <tr>
+                            <td class="ps-4 py-3"><i class="fas fa-vault text-secondary me-3"></i> 13. إجمالي المبلغ المسلم (الإيداعات):</td>
+                            <td class="pe-4 py-3 text-end p-0">
+                                <div class="px-4 py-3 bg-light rounded-start h-100">
+                                    <div class="d-flex justify-content-between mb-2 small border-bottom pb-1">
+                                        <span class="text-muted">يمني:</span> <span class="fw-bold fs-6"><?= number_format($cashSummary['deposits_yer']) ?></span>
+                                    </div>
+                                    <div class="d-flex justify-content-between mb-2 small border-bottom pb-1">
+                                        <span class="text-muted">سعودي:</span> <span class="fw-bold fs-6"><?= number_format($cashSummary['deposits_sar'], 2) ?></span>
+                                    </div>
+                                    <div class="d-flex justify-content-between small">
+                                        <span class="text-muted">دولار:</span> <span class="fw-bold fs-6"><?= number_format($cashSummary['deposits_usd'], 2) ?></span>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+
+                        <!-- 12. DRAWER RESULT -->
+                        <tr class="bg-dark text-white border-top border-4 border-white">
+                            <td class="ps-4 py-4 fw-bold fs-4 text-warning"><i class="fas fa-cash-register me-3"></i> 14. الرصيد المتبقي في الدرج (الإجمالي العام)</td>
+                            <td class="pe-4 py-4 text-end fw-bold fs-2 text-warning"><?= number_format($cashInHandResult) ?> <small class="fs-6 opacity-75">ريال</small></td>
+                        </tr>
+
+                        <!-- 13. ELECTRONIC BALANCE RESULT -->
+                        <tr class="bg-info text-white border-top border-2 border-white">
+                            <td class="ps-4 py-4 fw-bold fs-4"><i class="fas fa-wallet me-3"></i> 15. إجمالي الرصيد الإلكتروني (الحوالات)</td>
+                            <td class="pe-4 py-4 text-end fw-bold fs-2"><?= number_format($cashSummary['remaining_transfer'] ?? 0) ?> <small class="fs-6 opacity-75">ريال</small></td>
+                        </tr>
+                    </tbody>
+                </table>
             </div>
         </div>
-    </div>
-
-    <!-- Outflow Overview -->
-    <div class="col-md-4">
-        <div class="card h-100 shadow-sm summary-card border-top border-danger border-5">
-            <div class="card-body p-4">
-                <div class="icon-box bg-danger-subtle text-danger">
-                    <i class="fas fa-arrow-up"></i>
-                </div>
-                <h6 class="text-muted fw-bold text-uppercase small mb-3">النقد الخارج (المصروفات)</h6>
-                <div class="text-value text-danger"><?= number_format($totalOutflow) ?> <small class="fs-6 fw-normal">ريال</small></div>
-
-                <div class="mt-4 pt-3 border-top">
-                    <div class="d-flex justify-content-between mb-2 small">
-                        <span class="text-muted">مصاريف التشغيل:</span>
-                        <span class="fw-bold"><?= number_format($totalExpenses) ?></span>
-                    </div>
-                    <div class="d-flex justify-content-between mb-2 small">
-                        <span class="text-muted">مرتجعات العملاء:</span>
-                        <span class="fw-bold"><?= number_format($cashRefunds) ?></span>
-                    </div>
-                    <div class="d-flex justify-content-between mb-2 small text-primary">
-                        <span>إيداعات البنك/المندوب:</span>
-                        <span class="fw-bold"><?= number_format($depositsYER) ?></span>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<div class="row g-4 mb-5">
-    <!-- Secondary Stats -->
-    <div class="col-md-6">
-        <div class="card border-0 shadow-sm bg-light" style="border-radius: 15px;">
-            <div class="card-body p-4">
-                <h6 class="fw-bold mb-4 text-dark"><i class="fas fa-box-open me-2 text-primary"></i> تحليل الشراء والمبيعات النوعية</h6>
-                <div class="row text-center">
-                    <div class="col-6 border-end">
-                        <div class="text-muted small mb-1">تكلفة التوريد</div>
-                        <div class="h4 fw-bold mb-0"><?= number_format($totalPurchases) ?></div>
-                    </div>
-                    <div class="col-6">
-                        <div class="text-muted small mb-1">مبيعات البقايا</div>
-                        <div class="h4 fw-bold mb-0 text-info"><?= number_format($salesSummary['momsi_sales']) ?></div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="col-md-6">
-        <div class="card border-0 shadow-sm bg-dark text-white" style="border-radius: 15px;">
-            <div class="card-body p-4">
-                <h6 class="fw-bold mb-4 text-warning"><i class="fas fa-coins me-2"></i> تسليم العملات (صافي خارج العهدة)</h6>
-                <div class="row text-center">
-                    <div class="col-4 border-end border-secondary">
-                        <div class="text-white-50 small mb-1">يمني</div>
-                        <div class="h5 fw-bold mb-0 text-white"><?= number_format($depositsYER) ?></div>
-                    </div>
-                    <div class="col-4 border-end border-secondary">
-                        <div class="text-white-50 small mb-1">سعودي</div>
-                        <div class="h5 fw-bold mb-0 text-info"><?= number_format($depositsSAR, 2) ?></div>
-                    </div>
-                    <div class="col-4">
-                        <div class="text-white-50 small mb-1">دولار</div>
-                        <div class="h5 fw-bold mb-0 text-primary"><?= number_format($depositsUSD, 2) ?></div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Leftovers Breakdown Card -->
-<div class="row g-4 mb-4">
-    <div class="col-12">
-        <div class="card border-0 shadow-sm" style="border-radius: 15px; border-right: 5px solid #dc3545 !important;">
-            <div class="card-body p-4">
-                <h6 class="fw-bold mb-4 text-dark"><i class="fas fa-box-open me-2 text-danger"></i> تقرير البقايا — التالف والممسي</h6>
-                <div class="row g-3 text-center">
-                    <div class="col-6 col-md-3">
-                        <div class="bg-danger bg-opacity-10 rounded-3 p-3">
-                            <div class="text-danger small fw-bold mb-1"><i class="fas fa-trash-alt me-1"></i> إتلاف يدوي</div>
-                            <div class="h4 fw-bold mb-0"><?= number_format($leftoversSummary['manual_dropped_kg'] ?? 0, 2) ?></div>
-                            <div class="text-muted small">كجم</div>
-                        </div>
-                    </div>
-                    <div class="col-6 col-md-3">
-                        <div class="bg-danger bg-opacity-10 rounded-3 p-3" style="opacity: 0.75;">
-                            <div class="text-danger small fw-bold mb-1"><i class="fas fa-robot me-1"></i> إتلاف تلقائي</div>
-                            <div class="h4 fw-bold mb-0"><?= number_format($leftoversSummary['auto_dropped_kg'] ?? 0, 2) ?></div>
-                            <div class="text-muted small">كجم</div>
-                        </div>
-                    </div>
-                    <div class="col-6 col-md-3">
-                        <div class="bg-primary bg-opacity-10 rounded-3 p-3">
-                            <div class="text-primary small fw-bold mb-1"><i class="fas fa-arrow-right me-1"></i> ممسي يدوي</div>
-                            <div class="h4 fw-bold mb-0"><?= number_format($leftoversSummary['manual_momsi_kg'] ?? 0, 2) ?></div>
-                            <div class="text-muted small">كجم</div>
-                        </div>
-                    </div>
-                    <div class="col-6 col-md-3">
-                        <div class="bg-info bg-opacity-10 rounded-3 p-3">
-                            <div class="text-info small fw-bold mb-1"><i class="fas fa-robot me-1"></i> ممسي تلقائي</div>
-                            <div class="h4 fw-bold mb-0"><?= number_format($leftoversSummary['auto_momsi_kg'] ?? 0, 2) ?></div>
-                            <div class="text-muted small">كجم</div>
-                        </div>
-                    </div>
-                </div>
-                <div class="mt-3 pt-3 border-top d-flex justify-content-around text-center">
-                    <div>
-                        <div class="text-muted small">تالف (Dropped)</div>
-                        <div class="h5 fw-bold text-danger mb-0"><?= number_format($leftoversSummary['total_dropped_kg'] ?? 0, 2) ?> كجم</div>
-                    </div>
-                    <div class="vr"></div>
-                    <div>
-                        <div class="text-muted small">المبيعة الأولى</div>
-                        <div class="h5 fw-bold text-primary mb-0"><?= number_format($leftoversSummary['moms_day1_kg'] ?? 0, 2) ?> كجم</div>
-                    </div>
-                    <div class="vr"></div>
-                    <div>
-                        <div class="text-muted small">المبيعة الثانية</div>
-                        <div class="h5 fw-bold text-warning mb-0"><?= number_format($leftoversSummary['moms_day2_kg'] ?? 0, 2) ?> كجم</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Net Profit & Final Result -->
-<div class="row g-4 mb-4">
-    <!-- Net Profit estimation -->
-    <div class="col-md-5">
-        <div class="card border-0 shadow-sm h-100" style="border-radius: 20px; background: #f8f9fa; border-right: 5px solid #20c997 !important;">
-            <div class="card-body p-4">
-                <h6 class="fw-bold mb-4 text-dark"><i class="fas fa-chart-line me-2 text-success"></i> صافي الربح التقديري</h6>
-                <?php
-                $netProfit = $totalSales - $totalPurchases - $totalExpenses;
-                ?>
-                <div class="text-center py-3">
-                    <div class="display-5 fw-bold <?= $netProfit >= 0 ? 'text-success' : 'text-danger' ?>">
-                        <?= number_format($netProfit) ?> <small class="fs-6 fw-normal">ريال</small>
-                    </div>
-                    <p class="text-muted small mt-2">
-                        * (صافي المبيعات - المشتريات - المصاريف)
-                    </p>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Final Custody Result -->
-    <div class="col-md-7">
-        <div class="card border-0 shadow-lg text-white p-5 h-100 overflow-hidden"
-            style="border-radius: 30px; background: <?= $remainingCash >= 0 ? 'var(--primary-gradient)' : 'linear-gradient(135deg, #eb3349 0%, #f45c43 100%)' ?>; position: relative;">
-
-            <div style="position: absolute; top: -50px; right: -50px; width: 200px; height: 200px; background: rgba(255,255,255,0.1); border-radius: 50%;"></div>
-
-            <div class="row align-items-center position-relative">
-                <div class="col-12 mb-4">
-                    <div class="d-flex align-items-center mb-2">
-                        <div class="bg-white bg-opacity-20 p-3 rounded-4 me-3">
-                            <i class="fas fa-vault fs-2"></i>
-                        </div>
-                        <h2 class="mb-0 fw-bold fs-3">العهدة النقدية النهائية</h2>
-                    </div>
-                    <p class="mb-0 opacity-75 small">المستلم الفعلي المفترض تواجده حالياً مع المحاسب (بعد تصفية كافة العمليات)</p>
-                </div>
-                <div class="col-12 text-center text-md-end">
-                    <div class="display-3 fw-bold mb-0" style="text-shadow: 0 10px 20px rgba(0,0,0,0.2);">
-                        <?= number_format($remainingCash) ?>
-                    </div>
-                    <div class="h4 fw-light opacity-75 mb-0">ريال يمني</div>
-                    <?php if ($remainingCash < 0): ?>
-                        <div class="badge bg-white text-danger mt-3 badge-premium px-3 py-2 animation-pulse">عجز مالي</div>
-                    <?php else: ?>
-                        <div class="badge bg-white text-success mt-3 badge-premium px-3 py-2">رصيد إيجابي</div>
-                    <?php endif; ?>
-                </div>
-            </div>
+        
+        <div class="card-footer bg-light p-4 text-center">
+            <p class="text-muted small mb-0 fw-bold">
+                <i class="fas fa-info-circle text-primary me-2"></i> 
+                تم احتساب المديونية بناءً على الأرصدة الحالية، والربح بناءً على المبيعات والتكلفة والتالف.
+            </p>
         </div>
     </div>
 </div>

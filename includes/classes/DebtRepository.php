@@ -91,11 +91,18 @@ class DebtRepository extends BaseRepository
         return $this->execute($sql, [$saleId]);
     }
 
-    public function insertPayment($customerId, $amount, $note, $method = 'Cash', $date = null)
+    public function insertPayment($customerId, $amount, $note, $method = 'Cash', $date = null, $transferData = [])
     {
         $date = $date ?: date('Y-m-d');
-        $sql = "INSERT INTO payments (customer_id, amount, payment_method, note, payment_date) VALUES (?, ?, ?, ?, ?)";
-        return $this->execute($sql, [$customerId, $amount, $method, $note, $date]);
+        $sender = $transferData['sender'] ?? null;
+        $receiver = $transferData['receiver'] ?? null;
+        $number = $transferData['number'] ?? null;
+        $company = $transferData['company'] ?? null;
+
+        $sql = "INSERT INTO payments (customer_id, amount, payment_method, note, payment_date, 
+                                    transfer_sender, transfer_receiver, transfer_number, transfer_company) 
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        return $this->execute($sql, [$customerId, $amount, $method, $note, $date, $sender, $receiver, $number, $company]);
     }
 
     public function getUnpaidSales($customerId)
@@ -115,7 +122,13 @@ class DebtRepository extends BaseRepository
 
     public function updateCustomerDebt($customerId, $amountReduction)
     {
-        $sql = "UPDATE customers SET total_debt = total_debt - ? WHERE id = ?";
-        return $this->execute($sql, [$amountReduction, $customerId]);
+        // ✅ FIX #3: Recalculate total_debt from actual sales data instead of just decrementing.
+        // This prevents the cache from drifting over time due to partial payments, refunds, etc.
+        $sql = "UPDATE customers SET total_debt = (
+                    SELECT COALESCE(SUM(price - paid_amount - COALESCE(refund_amount, 0)), 0)
+                    FROM sales
+                    WHERE customer_id = ? AND is_paid = 0 AND is_returned = 0
+                ) WHERE id = ?";
+        return $this->execute($sql, [$customerId, $customerId]);
     }
 }

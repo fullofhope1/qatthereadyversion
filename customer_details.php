@@ -53,8 +53,10 @@ elseif (str_contains($back, '.php')) $backUrl = $back;
                 <h3><?= htmlspecialchars($customer['name']) ?></h3>
                 <p class="text-muted"><?= htmlspecialchars($customer['phone']) ?></p>
                 <hr>
-                <h5 class="text-muted">الدين الحالي</h5>
-                <h2 class="text-danger display-4"><?= number_format($customer['total_debt']) ?></h2>
+                <h5 class="text-muted"><?= $customer['total_debt'] < 0 ? 'رصيد دائن (له)' : 'الدين الحالي' ?></h5>
+                <h2 class="<?= $customer['total_debt'] < 0 ? 'text-success' : 'text-danger' ?> display-4">
+                    <?= number_format(abs($customer['total_debt'])) ?>
+                </h2>
                 <small>ريال</small>
             </div>
         </div>
@@ -81,10 +83,32 @@ elseif (str_contains($back, '.php')) $backUrl = $back;
 
                     <div class="mb-3">
                         <label class="form-label">طريقة السداد</label>
-                        <select class="form-select shadow-sm" name="payment_method">
+                        <select class="form-select shadow-sm" name="payment_method" id="payMethod" onchange="toggleTransferFields()">
                             <option value="Cash">نقدي</option>
                             <option value="Transfer">حوالة</option>
                         </select>
+                    </div>
+
+                    <!-- Extra fields for Transfer -->
+                    <div id="transferFields" class="d-none border rounded p-3 mb-3 bg-light animate__animated animate__fadeIn">
+                        <div class="row g-2">
+                            <div class="col-md-6">
+                                <label class="small fw-bold">اسم المرسل</label>
+                                <input type="text" name="transfer_sender" class="form-control form-control-sm" placeholder="اختياري">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="small fw-bold">اسم المستلم</label>
+                                <input type="text" name="transfer_receiver" class="form-control form-control-sm" placeholder="اختياري">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="small fw-bold">رقم الحوالة</label>
+                                <input type="text" name="transfer_number" class="form-control form-control-sm" placeholder="رقم الحوالة">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="small fw-bold">شركة الصرافة</label>
+                                <input type="text" name="transfer_company" class="form-control form-control-sm" placeholder="اختياري">
+                            </div>
+                        </div>
                     </div>
 
                     <div class="mb-3">
@@ -97,6 +121,18 @@ elseif (str_contains($back, '.php')) $backUrl = $back;
             </div>
         </div>
     </div>
+
+    <script>
+        function toggleTransferFields() {
+            const method = document.getElementById('payMethod').value;
+            const fields = document.getElementById('transferFields');
+            if (method === 'Transfer') {
+                fields.classList.remove('d-none');
+            } else {
+                fields.classList.add('d-none');
+            }
+        }
+    </script>
 
     <!-- History -->
     <div class="col-md-8">
@@ -148,8 +184,19 @@ elseif (str_contains($back, '.php')) $backUrl = $back;
                             <tr>
                                 <td><?= $p['payment_date'] ?></td>
                                 <td class="text-success fw-bold"><?= number_format($p['amount']) ?></td>
-                                <td><?= ($p['payment_method'] ?? 'Cash') === 'Transfer' ? '<span class="badge bg-info">حوالة</span>' : '<span class="badge bg-secondary">نقدي</span>' ?></td>
-                                <td><?= htmlspecialchars($p['note']) ?></td>
+                                <td>
+                                    <?php if (($p['payment_method'] ?? 'Cash') === 'Transfer'): ?>
+                                        <span class="badge bg-info mb-1">حوالة</span>
+                                        <div class="small text-muted" style="font-size: 0.75rem; line-height: 1.2;">
+                                            <div><strong>من:</strong> <?= htmlspecialchars($p['transfer_sender'] ?? '-') ?></div>
+                                            <div><strong>رقم:</strong> <?= htmlspecialchars($p['transfer_number'] ?? '-') ?></div>
+                                            <div><strong>عبر:</strong> <?= htmlspecialchars($p['transfer_company'] ?? '-') ?></div>
+                                        </div>
+                                    <?php else: ?>
+                                        <span class="badge bg-secondary">نقدي</span>
+                                    <?php endif; ?>
+                                </td>
+                                <td class="small text-muted"><?= htmlspecialchars($p['note']) ?></td>
                             </tr>
                         <?php endforeach; ?>
                     </tbody>

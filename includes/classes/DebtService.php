@@ -36,13 +36,13 @@ class DebtService extends BaseService
         return $this->debtRepo->rolloverSale($saleId);
     }
 
-    public function recordPayment($customerId, $amount, $note, $method = 'Cash')
+    public function recordPayment($customerId, $amount, $note, $method = 'Cash', $transferData = [])
     {
         try {
             $this->debtRepo->beginTransaction();
 
             // 1. Insert Payment Record
-            $this->debtRepo->insertPayment($customerId, $amount, $note, $method);
+            $this->debtRepo->insertPayment($customerId, $amount, $note, $method, null, $transferData);
 
             // 2. Distribute payment across sales (oldest first)
             $remaining = $amount;

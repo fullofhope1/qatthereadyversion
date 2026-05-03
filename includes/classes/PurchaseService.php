@@ -67,10 +67,23 @@ class PurchaseService extends BaseService
                 throw new Exception("الشحنة غير موجودة");
             }
 
+            // Logic: Recalculate Agreed Price based on actual received amount
+            $newAgreedPrice = $purchase['agreed_price'];
+            if ($purchase['unit_type'] === 'weight') {
+                if ($purchase['price_per_kilo'] > 0) {
+                    $newAgreedPrice = (float)$quantityKg * (float)$purchase['price_per_kilo'];
+                }
+            } else {
+                if ($purchase['price_per_unit'] > 0) {
+                    $newAgreedPrice = (int)$receivedUnits * (float)$purchase['price_per_unit'];
+                }
+            }
+
             $this->purchaseRepo->update($id, [
                 'received_weight_grams' => $receivedWeightGrams,
                 'quantity_kg' => $quantityKg,
                 'received_units' => $receivedUnits,
+                'agreed_price' => $newAgreedPrice,
                 'is_received' => 1,
                 'received_at' => date('Y-m-d H:i:s'),
                 'purchase_date' => date('Y-m-d')

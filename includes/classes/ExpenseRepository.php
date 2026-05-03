@@ -6,8 +6,8 @@ class ExpenseRepository extends BaseRepository
 
     public function create(array $data)
     {
-        $sql = "INSERT INTO expenses (expense_date, description, amount, category, staff_id, created_by) 
-                VALUES (:expense_date, :description, :amount, :category, :staff_id, :created_by)";
+        $sql = "INSERT INTO expenses (expense_date, description, amount, payment_method, category, staff_id, provider_id, created_by) 
+                VALUES (:expense_date, :description, :amount, :payment_method, :category, :staff_id, :provider_id, :created_by)";
         return $this->execute($sql, $data);
     }
 
@@ -29,9 +29,10 @@ class ExpenseRepository extends BaseRepository
 
     public function getTodayExpenses($date, $userId)
     {
-        $sql = "SELECT e.*, s.name as staff_name 
+        $sql = "SELECT e.*, s.name as staff_name, p.name as provider_name
                 FROM expenses e 
                 LEFT JOIN staff s ON e.staff_id = s.id 
+                LEFT JOIN providers p ON e.provider_id = p.id
                 WHERE expense_date = ? AND e.created_by = ? 
                 ORDER BY id DESC";
         return $this->fetchAll($sql, [$date, $userId]);
@@ -39,6 +40,6 @@ class ExpenseRepository extends BaseRepository
 
     public function getTotalStaffWithdrawals($staffId)
     {
-        return $this->fetchColumn("SELECT SUM(amount) FROM expenses WHERE staff_id = ? AND category = 'Staff'", [$staffId]) ?: 0;
+        return $this->fetchColumn("SELECT SUM(amount) FROM expenses WHERE staff_id = ? AND category = 'Staff' AND expense_date = CURRENT_DATE", [$staffId]) ?: 0;
     }
 }

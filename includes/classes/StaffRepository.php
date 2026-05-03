@@ -23,7 +23,7 @@ class StaffRepository extends BaseRepository
         // super_admin sees ALL staff (from their own operation context as clarified by user)
         if ($role === 'super_admin') {
             $sql = "SELECT s.*,
-                    (SELECT SUM(amount) FROM expenses WHERE staff_id = s.id AND category = 'Staff') as current_withdrawals
+                    (SELECT SUM(amount) FROM expenses WHERE staff_id = s.id AND category = 'Staff' AND expense_date = CURRENT_DATE) as current_withdrawals
                     FROM staff s
                     WHERE 1=1 $statusFilter
                     ORDER BY s.is_active DESC, s.name ASC";
@@ -31,7 +31,7 @@ class StaffRepository extends BaseRepository
         }
 
         $sql = "SELECT s.*,
-                (SELECT SUM(amount) FROM expenses WHERE staff_id = s.id AND category = 'Staff') as current_withdrawals
+                (SELECT SUM(amount) FROM expenses WHERE staff_id = s.id AND category = 'Staff' AND expense_date = CURRENT_DATE) as current_withdrawals
                 FROM staff s
                 WHERE s.created_by = ? $statusFilter
                 ORDER BY s.is_active DESC, s.name ASC";
