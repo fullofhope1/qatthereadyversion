@@ -27,15 +27,18 @@ class ExpenseRepository extends BaseRepository
         return $this->execute("DELETE FROM expenses WHERE id = ?", [$id]);
     }
 
-    public function getTodayExpenses($date, $userId)
+
+    public function getTodayExpenses($date, $userId, $role = 'super_admin')
     {
+        // Team isolation: Filter by the role of the creator to group Super Admin with their sub-roles
         $sql = "SELECT e.*, s.name as staff_name, p.name as provider_name
                 FROM expenses e 
                 LEFT JOIN staff s ON e.staff_id = s.id 
                 LEFT JOIN providers p ON e.provider_id = p.id
-                WHERE expense_date = ? AND e.created_by = ? 
-                ORDER BY id DESC";
-        return $this->fetchAll($sql, [$date, $userId]);
+                JOIN users u ON e.created_by = u.id
+                WHERE e.expense_date = ? AND u.role = ? 
+                ORDER BY e.id DESC";
+        return $this->fetchAll($sql, [$date, $role]);
     }
 
     public function getTotalStaffWithdrawals($staffId)

@@ -8,6 +8,10 @@
 require_once 'includes/Autoloader.php';
 require_once 'config/db.php';
 
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
 $token = $_GET['route'] ?? '';
 $targetFile = Router::resolve($token);
 
@@ -16,6 +20,12 @@ if ($targetFile && file_exists($targetFile)) {
     $GLOBALS['TARGET_PAGE'] = $targetFile;
     include $targetFile;
 } else {
-    // If no route matches, fall back to index.php or 404
-    include 'index.php';
+    // If no route matches, check if it's a direct file access (for local dev) or redirect to index
+    if ($token && file_exists($token . ".php")) {
+        $GLOBALS['TARGET_PAGE'] = $token . ".php";
+        include $token . ".php";
+    } else {
+        header("Location: index.php");
+        exit;
+    }
 }

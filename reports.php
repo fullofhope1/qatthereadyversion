@@ -71,10 +71,10 @@ $service = new ReportService($reportRepo);
 // Every user (Admin or Super Admin) sees ONLY their own data by default.
 // This ensures that personal expenses and operations are not merged.
 $report_user_id = $_SESSION['user_id'] ?? null;
-$isolated_user_id = $_SESSION['user_id'] ?? null;
+$report_role    = $_SESSION['role'] ?? 'super_admin';
 
 // --- CORE DATA FETCHING ---
-$overview = $service->getOverviewData($reportType, $date, $month, $year, $report_user_id);
+$overview = $service->getOverviewData($reportType, $date, $month, $year, $report_user_id, $report_role);
 $grossSales = $overview['gross_sales'] ?? 0;
 $totalRefunds = $overview['total_refunds'] ?? 0;
 $totalSales = $overview['total_sales'];

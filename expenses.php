@@ -10,7 +10,8 @@ $providerRepo = new ProviderRepository($pdo);
 
 // Fetch Staff with current withdrawals
 $user_id = $_SESSION['user_id'];
-$staff = $staffRepo->getWithCurrentWithdrawals($user_id);
+$user_role = $_SESSION['role'];
+$staff = $staffRepo->getWithCurrentWithdrawals($user_id, $user_role);
 $jsonStaff = json_encode($staff);
 
 $today = date('Y-m-d');
@@ -19,7 +20,7 @@ $today = date('Y-m-d');
 $providers = $providerRepo->getAll();
 
 // Expenses
-$expenses = $expenseRepo->getTodayExpenses($today, $user_id);
+$expenses = $expenseRepo->getTodayExpenses($today, $user_id, $user_role);
 
 // Deposits
 $deposits = $depositRepo->getTodayDeposits($today, $user_id);

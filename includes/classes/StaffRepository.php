@@ -19,23 +19,16 @@ class StaffRepository extends BaseRepository
     public function getWithCurrentWithdrawals($userId, $role = null, $subRole = null, $showInactive = false)
     {
         $statusFilter = $showInactive ? "" : " AND s.is_active = 1";
+        $current_role = $role ?: 'super_admin';
 
-        // super_admin sees ALL staff (from their own operation context as clarified by user)
-        if ($role === 'super_admin') {
-            $sql = "SELECT s.*,
-                    (SELECT SUM(amount) FROM expenses WHERE staff_id = s.id AND category = 'Staff' AND expense_date = CURRENT_DATE) as current_withdrawals
-                    FROM staff s
-                    WHERE 1=1 $statusFilter
-                    ORDER BY s.is_active DESC, s.name ASC";
-            return $this->fetchAll($sql);
-        }
-
+        // Join with users table to filter by the role group (Merchant team vs Supplier team)
         $sql = "SELECT s.*,
                 (SELECT SUM(amount) FROM expenses WHERE staff_id = s.id AND category = 'Staff' AND expense_date = CURRENT_DATE) as current_withdrawals
                 FROM staff s
-                WHERE s.created_by = ? $statusFilter
+                JOIN users u ON s.created_by = u.id
+                WHERE u.role = ? $statusFilter
                 ORDER BY s.is_active DESC, s.name ASC";
-        return $this->fetchAll($sql, [$userId]);
+        return $this->fetchAll($sql, [$current_role]);
     }
 
     public function update($id, array $data)
@@ -48,6 +41,7 @@ class StaffRepository extends BaseRepository
         $data['id'] = $id;
         return $this->execute($sql, $data);
     }
+
 
     public function getMonthlyWithdrawals($staffId, $month)
     {

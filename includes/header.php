@@ -345,8 +345,10 @@ if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
 
                         <?php if ($is_full || $sub_role === 'receiving' || $sub_role === 'verifier'): ?>
                             <li class="nav-item"><a class="nav-link <?= navActive('purchases.php', $current_page) ?>" href="<?= Router::getUrl('purchases.php') ?>"><i class="fas fa-truck me-1"></i> استلام المشتريات</a></li>
-                            <li class="nav-item"><a class="nav-link <?= navActive('provider_statements.php', $current_page) ?>" href="<?= Router::getUrl('provider_statements.php') ?>"><i class="fas fa-file-invoice me-1"></i> كشوفات الموردين</a></li>
-                            <li class="nav-item"><a class="nav-link <?= navActive('staff_statements.php', $current_page) ?>" href="<?= Router::getUrl('staff_statements.php') ?>"><i class="fas fa-id-badge me-1"></i> كشوفات الموظفين</a></li>
+                            <?php if ($is_full): ?>
+                                <li class="nav-item"><a class="nav-link <?= navActive('provider_statements.php', $current_page) ?>" href="<?= Router::getUrl('provider_statements.php') ?>"><i class="fas fa-file-invoice me-1"></i> كشوفات الموردين</a></li>
+                                <li class="nav-item"><a class="nav-link <?= navActive('staff_statements.php', $current_page) ?>" href="<?= Router::getUrl('staff_statements.php') ?>"><i class="fas fa-id-badge me-1"></i> كشوفات الموظفين</a></li>
+                            <?php endif; ?>
                         <?php endif; ?>
 
                         <?php if ($is_full || $sub_role === 'sales_debts' || $sub_role === 'seller'): ?>
@@ -356,6 +358,9 @@ if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
 
                         <?php if ($is_full): ?>
                             <li class="nav-item"><a class="nav-link <?= navActive('refunds.php', $current_page) ?>" href="<?= Router::getUrl('refunds.php') ?>"><i class="fas fa-hand-holding-usd me-1"></i> التعويضات</a></li>
+                        <?php endif; ?>
+                        
+                        <?php if ($is_full || $sub_role === 'seller'): ?>
                             <li class="nav-item"><a class="nav-link <?= navActive('returns.php', $current_page) ?>" href="<?= Router::getUrl('returns.php') ?>"><i class="fas fa-undo me-1"></i> المرتجعات</a></li>
                         <?php endif; ?>
 

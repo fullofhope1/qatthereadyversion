@@ -20,34 +20,40 @@ class ReportRepository extends BaseRepository
         }
     }
 
-    public function getTotals($reportType, $date, $month, $year, $userId = null)
+    public function getTotals($reportType, $date, $month, $year, $userId = null, $role = 'super_admin')
     {
-        list($whereSales, $paramsSales) = $this->getWhereAndParams($reportType, $date, $month, $year, 'sale_date');
-        list($wherePurch, $paramsPurch) = $this->getWhereAndParams($reportType, $date, $month, $year, 'purchase_date');
-        list($whereExp, $paramsExp) = $this->getWhereAndParams($reportType, $date, $month, $year, 'expense_date');
+        list($whereSales, $paramsSales) = $this->getWhereAndParams($reportType, $date, $month, $year, 's.sale_date');
+        list($wherePurch, $paramsPurch) = $this->getWhereAndParams($reportType, $date, $month, $year, 'p.purchase_date');
+        list($whereExp, $paramsExp) = $this->getWhereAndParams($reportType, $date, $month, $year, 'e.expense_date');
 
-        // Filter expenses by the current user to separate admin/super_admin data
-        if ($userId !== null) {
-            $whereExp .= " AND created_by = ?";
-            $paramsExp[] = $userId;
-        }
+        // Isolation Logic: Filter ALL metrics by the creator's role (Merchant team vs Supplier team)
+        $whereSales .= " AND u.role = ?";
+        $paramsSales[] = $role;
+        
+        $wherePurch .= " AND u.role = ?";
+        $paramsPurch[] = $role;
+        
+        $whereExp .= " AND u.role = ?";
+        $paramsExp[] = $role;
 
-        $grossSales = $this->fetchColumn("SELECT SUM(price) FROM sales $whereSales AND is_returned = 0", $paramsSales) ?: 0;
-        $totalRefunds = $this->fetchColumn("SELECT SUM(refund_amount) FROM sales $whereSales AND is_returned = 0", $paramsSales) ?: 0;
+        $grossSales = $this->fetchColumn("SELECT SUM(s.price) FROM sales s JOIN users u ON s.created_by = u.id $whereSales AND s.is_returned = 0", $paramsSales) ?: 0;
+        $totalRefunds = $this->fetchColumn("SELECT SUM(s.refund_amount) FROM sales s JOIN users u ON s.created_by = u.id $whereSales AND s.is_returned = 0", $paramsSales) ?: 0;
         $totalSales = $grossSales - $totalRefunds;
 
         // HIGH ACCURACY PROFIT METRICS
-        $totalPurchases = $this->fetchColumn("SELECT SUM(net_cost - discount_amount) FROM purchases $wherePurch", $paramsPurch) ?: 0;
-        $totalCogs = $this->calculateCogs($reportType, $date, $month, $year);
-        $totalWasteValue = $this->calculateDroppedCost($reportType, $date, $month, $year);
-        $totalExpenses = $this->fetchColumn("SELECT SUM(amount) FROM expenses $whereExp AND category != 'تسديد مورد'", $paramsExp) ?: 0;
-        $totalProviderPayments = $this->fetchColumn("SELECT SUM(amount) FROM expenses $whereExp AND category = 'تسديد مورد'", $paramsExp) ?: 0;
+        $totalPurchases = $this->fetchColumn("SELECT SUM(p.net_cost - p.discount_amount) FROM purchases p JOIN users u ON p.created_by = u.id $wherePurch", $paramsPurch) ?: 0;
+        $totalCogs = $this->calculateCogs($reportType, $date, $month, $year, $role);
+        $totalWasteValue = $this->calculateDroppedCost($reportType, $date, $month, $year, $role);
+        $totalExpenses = $this->fetchColumn("SELECT SUM(e.amount) FROM expenses e JOIN users u ON e.created_by = u.id $whereExp AND e.category != 'تسديد مورد'", $paramsExp) ?: 0;
+        $totalProviderPayments = $this->fetchColumn("SELECT SUM(e.amount) FROM expenses e JOIN users u ON e.created_by = u.id $whereExp AND e.category = 'تسديد مورد'", $paramsExp) ?: 0;
         
         // FIX #10: Include compensations/refunds in profit calculation
         $totalCompensations = 0;
         try {
-            list($whereRef, $paramsRef) = $this->getWhereAndParams($reportType, $date, $month, $year, 'DATE(created_at)');
-            $totalCompensations = (float)$this->fetchColumn("SELECT SUM(amount) FROM refunds $whereRef AND (weight_kg = 0 AND quantity_units = 0)", $paramsRef) ?: 0;
+            list($whereRef, $paramsRef) = $this->getWhereAndParams($reportType, $date, $month, $year, 'DATE(r.created_at)');
+            $whereRef .= " AND u.role = ?";
+            $paramsRef[] = $role;
+            $totalCompensations = (float)$this->fetchColumn("SELECT SUM(r.amount) FROM refunds r JOIN users u ON r.created_by = u.id $whereRef AND (r.weight_kg = 0 AND r.quantity_units = 0)", $paramsRef) ?: 0;
         } catch (Exception $e) {}
 
         // Final Calculation: Sales - (Cost of what was sold) - (Cost of what was trashed today) - Expenses - Compensations
@@ -85,10 +91,12 @@ class ReportRepository extends BaseRepository
         return (float)$this->fetchColumn($sql) ?: 0;
     }
 
-    private function calculateCogs($reportType, $date, $month, $year)
+    private function calculateCogs($reportType, $date, $month, $year, $role = 'super_admin')
     {
         list($where, $params) = $this->getWhereAndParams($reportType, $date, $month, $year, 's.sale_date');
-        
+        $where .= " AND u.role = ?";
+        $params[] = $role;
+
         $sql = "SELECT SUM(
                     CASE 
                         WHEN s.purchase_id IS NOT NULL THEN 
@@ -99,6 +107,7 @@ class ReportRepository extends BaseRepository
                     END
                 ) as total_cost
                 FROM sales s
+                JOIN users u ON s.created_by = u.id
                 LEFT JOIN purchases p ON s.purchase_id = p.id
                 LEFT JOIN leftovers l ON s.leftover_id = l.id
                 LEFT JOIN purchases pl ON l.purchase_id = pl.id
@@ -107,9 +116,11 @@ class ReportRepository extends BaseRepository
         return (float)$this->fetchColumn($sql, $params) ?: 0;
     }
 
-    private function calculateDroppedCost($reportType, $date, $month, $year)
+    private function calculateDroppedCost($reportType, $date, $month, $year, $role = 'super_admin')
     {
         list($where, $params) = $this->getWhereAndParams($reportType, $date, $month, $year, 'l.decision_date');
+        $where .= " AND u.role = ?";
+        $params[] = $role;
         
         $sql = "SELECT SUM(
                     CASE 
@@ -119,6 +130,7 @@ class ReportRepository extends BaseRepository
                 ) as total_waste_value
                 FROM leftovers l
                 JOIN purchases p ON l.purchase_id = p.id
+                JOIN users u ON l.created_by = u.id
                 $where AND l.status IN ('Dropped', 'Auto_Dropped')";
         
         return (float)$this->fetchColumn($sql, $params) ?: 0;

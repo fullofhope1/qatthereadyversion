@@ -4,7 +4,9 @@ require 'config/db.php';
 
 // Strict Check: Sourcing is NOT for Super Admins
 // Must happen BEFORE including header.php to avoid "headers already sent"
-session_start();
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 if (isset($_SESSION['role']) && $_SESSION['role'] === 'super_admin') {
     header("Location: purchases.php");
     exit;

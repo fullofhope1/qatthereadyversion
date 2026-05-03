@@ -13,8 +13,20 @@ class Router {
         'rep-gen'   => 'reports.php',
         'exp-tr'    => 'expenses.php',
         'db-stat'   => 'debts.php',
-        // Add more mappings here. You can use random strings if you prefer.
-        // 'x9f2'   => 'closing.php', 
+        'prov-mgr'  => 'providers.php',
+        'prov-stat' => 'provider_statements.php',
+        'stf-mgr'   => 'staff.php',
+        'stf-det'   => 'staff_details.php',
+        'stf-stat'  => 'staff_statements.php',
+        'att-mgr'   => 'attendance.php',
+        'dash'      => 'dashboard.php',
+        'set-cfg'   => 'settings.php',
+        'ad-mgr'    => 'manage_ads.php',
+        'prod-mgr'  => 'manage_products.php',
+        'ref-mgr'   => 'refunds.php',
+        'adm-rep'   => 'admin_report.php',
+        'unk-tr'    => 'unknown_transfers.php',
+        'ret-mgr'   => 'returns.php'
     ];
 
     /**

@@ -6,18 +6,34 @@ include 'includes/header.php';
 
 <?php
 $today = date('Y-m-d');
+$user_id = $_SESSION['user_id'];
+$user_role = $_SESSION['role'];
 
-// Today's Sales Total
-$todaySales = $pdo->query("SELECT SUM(price - COALESCE(refund_amount, 0)) FROM sales WHERE sale_date = '$today' AND is_returned = 0")->fetchColumn() ?: 0;
+// Initialize Repositories
+$reportRepo = new ReportRepository($pdo);
+$expenseRepo = new ExpenseRepository($pdo);
+$purchaseRepo = new PurchaseRepository($pdo);
 
-// Total Debts
-$totalDebts = $pdo->query("SELECT SUM(total_debt) FROM customers")->fetchColumn() ?: 0;
+// Fetch Isolated Data (By Team Role)
+// 1. Today's Sales (Team level)
+$todaySales = $pdo->prepare("SELECT SUM(s.price - COALESCE(s.refund_amount, 0)) FROM sales s JOIN users u ON s.created_by = u.id WHERE s.sale_date = ? AND s.is_returned = 0 AND u.role = ?");
+$todaySales->execute([$today, $user_role]);
+$todaySalesTotal = $todaySales->fetchColumn() ?: 0;
 
-// Today's Expenses
-$todayExpenses = $pdo->query("SELECT SUM(amount) FROM expenses WHERE expense_date = '$today'")->fetchColumn() ?: 0;
+// 2. Total Debts (Team level)
+$totalDebts = $pdo->prepare("SELECT SUM(c.total_debt) FROM customers c JOIN users u ON c.created_by = u.id WHERE u.role = ?");
+$totalDebts->execute([$user_role]);
+$totalDebtsTotal = $totalDebts->fetchColumn() ?: 0;
 
-// Today's Purchases
-$todayPurchases = $pdo->query("SELECT SUM(agreed_price) FROM purchases WHERE purchase_date = '$today'")->fetchColumn() ?: 0;
+// 3. Today's Expenses (Team level)
+$expenses = $expenseRepo->getTodayExpenses($today, $user_id, $user_role);
+$todayExpensesTotal = 0;
+foreach($expenses as $e) $todayExpensesTotal += $e['amount'];
+
+// 4. Today's Purchases (Team level)
+$todayPurchases = $pdo->prepare("SELECT SUM(p.agreed_price) FROM purchases p JOIN users u ON p.created_by = u.id WHERE p.purchase_date = ? AND u.role = ?");
+$todayPurchases->execute([$today, $user_role]);
+$todayPurchasesTotal = $todayPurchases->fetchColumn() ?: 0;
 ?>
 
 <div class="row">
@@ -29,7 +45,7 @@ $todayPurchases = $pdo->query("SELECT SUM(agreed_price) FROM purchases WHERE pur
                 <div class="card text-white bg-success mb-3 shadow">
                     <div class="card-header"><i class="fas fa-shopping-cart me-1"></i> مبيعات اليوم</div>
                     <div class="card-body">
-                        <h3 class="card-title"><?= number_format($todaySales) ?> ريال</h3>
+                        <h3 class="card-title"><?= number_format($todaySalesTotal) ?> ريال</h3>
                         <a href="sales.php" class="btn btn-light btn-sm">عرض <i class="fas fa-arrow-left"></i></a>
                     </div>
                 </div>
@@ -40,7 +56,7 @@ $todayPurchases = $pdo->query("SELECT SUM(agreed_price) FROM purchases WHERE pur
                 <div class="card text-white bg-danger mb-3 shadow">
                     <div class="card-header"><i class="fas fa-file-invoice-dollar me-1"></i> إجمالي الديون</div>
                     <div class="card-body">
-                        <h3 class="card-title"><?= number_format($totalDebts) ?> ريال</h3>
+                        <h3 class="card-title"><?= number_format($totalDebtsTotal) ?> ريال</h3>
                         <a href="debts.php" class="btn btn-light btn-sm">عرض <i class="fas fa-arrow-left"></i></a>
                     </div>
                 </div>
@@ -51,7 +67,7 @@ $todayPurchases = $pdo->query("SELECT SUM(agreed_price) FROM purchases WHERE pur
                 <div class="card text-white bg-warning mb-3 shadow">
                     <div class="card-header"><i class="fas fa-wallet me-1"></i> مصاريف اليوم</div>
                     <div class="card-body">
-                        <h3 class="card-title text-dark"><?= number_format($todayExpenses) ?> ريال</h3>
+                        <h3 class="card-title text-dark"><?= number_format($todayExpensesTotal) ?> ريال</h3>
                         <a href="expenses.php" class="btn btn-dark btn-sm">عرض <i class="fas fa-arrow-left"></i></a>
                     </div>
                 </div>
@@ -62,7 +78,7 @@ $todayPurchases = $pdo->query("SELECT SUM(agreed_price) FROM purchases WHERE pur
                 <div class="card text-white bg-primary mb-3 shadow">
                     <div class="card-header"><i class="fas fa-truck me-1"></i> مشتريات اليوم</div>
                     <div class="card-body">
-                        <h3 class="card-title"><?= number_format($todayPurchases) ?> ريال</h3>
+                        <h3 class="card-title"><?= number_format($todayPurchasesTotal) ?> ريال</h3>
                         <a href="purchases.php" class="btn btn-light btn-sm">عرض <i class="fas fa-arrow-left"></i></a>
                     </div>
                 </div>
