@@ -14,7 +14,7 @@ if ($is_localhost) {
     $servername = "sql308.infinityfree.com";
     $username = "if0_41735561";
     $password = "DVf4IqRZf9Zh6";
-    $dbname = "if0_41735561_qat_db";
+    $dbname = "if0_41735561_qat_erp";
 }
 
 date_default_timezone_set('Asia/Aden');
