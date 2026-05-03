@@ -36,31 +36,19 @@ function requireRole($role)
 function checkPermission()
 {
     if (PHP_SAPI === 'cli') return true;
-    if ($_SESSION['role'] === 'admin') return false; // Basic admins have their own logic in header.php
-
-    $sub_role = $_SESSION['sub_role'] ?? 'full';
-    if ($sub_role === 'full') return true;
-
-    // Allowed for all roles
-    $global_allowed = ['settings.php', 'logout.php', 'access_denied.php'];
-    $current_page = basename($_SERVER['PHP_SELF']);
+    
+    // Support for Secure Routing Proxy (TARGET_PAGE)
+    $current_page = $GLOBALS['TARGET_PAGE'] ?? basename($_SERVER['PHP_SELF']);
+    
+    $global_allowed = ['settings.php', 'logout.php', 'access_denied.php', 'index.php'];
     if (in_array($current_page, $global_allowed)) return true;
 
-    $permissions = [
-        'reports' => ['reports.php', 'admin_report.php', 'unknown_transfers.php'],
-        'sales_debts' => ['sales.php', 'customers.php', 'debts.php', 'sales_leftovers_1.php', 'sales_leftovers_2.php', 'customer_details.php', 'customer_statement.php', 'expenses.php'],
-        'receiving' => ['purchases.php', 'sourcing.php', 'inventory.php', 'dashboard.php', 'expenses.php'],
-        // New specific roles
-        'seller' => ['sales.php', 'customers.php', 'debts.php', 'staff.php', 'staff_details.php', 'expenses.php', 'sales_leftovers_1.php', 'sales_leftovers_2.php', 'customer_details.php', 'customer_statement.php'],
-        'accountant' => ['whatsapp_statements.php', 'reports.php', 'admin_report.php'],
-        'partner' => ['reports.php', 'admin_report.php'],
-        'verifier' => ['purchases.php', 'sourcing.php', 'inventory.php', 'providers.php', 'dashboard.php']
-    ];
+    // If the user is an Admin or Super Admin, they have access to all system tabs
+    if (isset($_SESSION['role']) && ($_SESSION['role'] === 'admin' || $_SESSION['role'] === 'super_admin')) {
+        return true;
+    }
 
-    if (!isset($permissions[$sub_role])) return false;
-
-    $current_page = basename($_SERVER['PHP_SELF']);
-    return in_array($current_page, $permissions[$sub_role]);
+    return false; // Default for normal users trying to access admin pages
 }
 
 function requirePermission()

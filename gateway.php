@@ -12,7 +12,8 @@ $token = $_GET['route'] ?? '';
 $targetFile = Router::resolve($token);
 
 if ($targetFile && file_exists($targetFile)) {
-    // Before including, we might want to set some flags or handle specific logic
+    // Set a flag so header.php knows the real page being accessed
+    $GLOBALS['TARGET_PAGE'] = $targetFile;
     include $targetFile;
 } else {
     // If no route matches, fall back to index.php or 404

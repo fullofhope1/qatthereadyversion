@@ -26,8 +26,8 @@ header('X-Frame-Options: DENY');
 header('X-XSS-Protection: 1; mode=block');
 header('Referrer-Policy: strict-origin-when-cross-origin');
 
-// Basic page name
-$current_page = basename($_SERVER['PHP_SELF']);
+// Basic page name (Support for Secure Routing Proxy)
+$current_page = $GLOBALS['TARGET_PAGE'] ?? basename($_SERVER['PHP_SELF']);
 
 // Pages allowed without login
 $public_pages = ['index.php'];
@@ -50,11 +50,10 @@ if (isset($_SESSION['user_id']) && $_SESSION['role'] === 'user' && !in_array($cu
     }
 }
 
-// For Admins -> Restrict access to some pages if not super_admin
-$admin_allowed_pages = ['sourcing.php', 'providers.php', 'provider_statements.php', 'expenses.php', 'admin_report.php', 'settings.php', 'logout.php', 'dashboard.php', 'refunds.php', 'manage_ads.php', 'manage_products.php', 'staff.php', 'staff_details.php', 'staff_statements.php', 'attendance.php'];
-if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin' && !in_array($current_page, $admin_allowed_pages) && !in_array($current_page, $public_pages)) {
-    header("Location: access_denied.php");
-    exit;
+// For Admins -> Allow access to all administrative pages
+if (isset($_SESSION['role']) && ($_SESSION['role'] === 'admin' || $_SESSION['role'] === 'super_admin')) {
+    // If they are logged in as admin/super_admin, they are generally allowed to access the system pages.
+    // We only block them if it's a completely invalid page (handled by 404/gateway).
 }
 
 // For Super Admins -> Restrict access based on sub_role
