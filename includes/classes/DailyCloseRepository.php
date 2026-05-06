@@ -25,6 +25,7 @@ class DailyCloseRepository extends BaseRepository
         return $this->fetchAll($sql);
     }
 
+
     public function markAsMomsiDay2($id, $tomorrowDate)
     {
         return $this->execute("UPDATE leftovers SET status = 'Momsi_Day_2', sale_date = ? WHERE id = ?", [$tomorrowDate, $id]);
