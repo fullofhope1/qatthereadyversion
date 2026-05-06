@@ -10,26 +10,26 @@ class ReportService extends BaseService
         $this->reportRepo = $reportRepo;
     }
 
-    public function getOverviewData($reportType, $date, $month, $year, $userId = null)
+    public function getOverviewData($reportType, $date, $month, $year, $userId = null, $role = 'super_admin')
     {
-        $totals = $this->reportRepo->getTotals($reportType, $date, $month, $year, $userId);
+        $totals = $this->reportRepo->getTotals($reportType, $date, $month, $year, $userId, $role);
         $debtStats = $this->reportRepo->getDebtStats();
         $refunds = $this->reportRepo->getRefunds($reportType, $date, $month, $year);
 
         return array_merge($totals, $debtStats, ['refunds' => $refunds]);
     }
 
-    public function getDetailedViewData($view, $reportType, $date, $month, $year, $providerId = null, $userId = null)
+    public function getDetailedViewData($view, $reportType, $date, $month, $year, $providerId = null, $userId = null, $role = 'super_admin')
     {
         switch ($view) {
             case 'Sales':
-                return $this->reportRepo->getSalesList($reportType, $date, $month, $year, $providerId);
+                return $this->reportRepo->getSalesList($reportType, $date, $month, $year, $providerId, $role);
             case 'Receiving':
-                return $this->reportRepo->getPurchasesList($reportType, $date, $month, $year);
+                return $this->reportRepo->getPurchasesList($reportType, $date, $month, $year, $role);
             case 'Expenses':
-                return $this->reportRepo->getExpensesList($reportType, $date, $month, $year, $userId);
+                return $this->reportRepo->getExpensesList($reportType, $date, $month, $year, $userId, $role);
             case 'Waste':
-                return $this->reportRepo->getWasteList($reportType, $date, $month, $year);
+                return $this->reportRepo->getWasteList($reportType, $date, $month, $year, $role);
             case 'Staff':
                 return $this->reportRepo->getStaffStats($reportType, $date, $month, $year, $userId);
             case 'Customers':
@@ -45,22 +45,22 @@ class ReportService extends BaseService
             case 'Deposits':
                 return $this->reportRepo->getDepositsList($reportType, $date, $month, $year);
             case 'Shipments':
-                return $this->reportRepo->getShipmentPerformance($reportType, $date, $month, $year);
+                return $this->reportRepo->getShipmentPerformance($reportType, $date, $month, $year, $role);
             case 'Printable':
                 return [
-                    'sales' => $this->reportRepo->getSalesList($reportType, $date, $month, $year),
-                    'purchases' => $this->reportRepo->getPurchasesList($reportType, $date, $month, $year),
-                    'expenses' => $this->reportRepo->getExpensesList($reportType, $date, $month, $year, $userId),
-                    'waste' => $this->reportRepo->getWasteList($reportType, $date, $month, $year)
+                    'sales' => $this->reportRepo->getSalesList($reportType, $date, $month, $year, null, $role),
+                    'purchases' => $this->reportRepo->getPurchasesList($reportType, $date, $month, $year, $role),
+                    'expenses' => $this->reportRepo->getExpensesList($reportType, $date, $month, $year, $userId, $role),
+                    'waste' => $this->reportRepo->getWasteList($reportType, $date, $month, $year, $role)
                 ];
             default:
                 return [];
         }
     }
 
-    public function getCashSummary($reportType, $date, $month, $year, $userId = null)
+    public function getCashSummary($reportType, $date, $month, $year, $userId = null, $role = 'super_admin')
     {
-        $summary = $this->reportRepo->getCashSummary($reportType, $date, $month, $year, $userId);
+        $summary = $this->reportRepo->getCashSummary($reportType, $date, $month, $year, $userId, $role);
         // Calculate remaining cash using correct keys from the updated repository
         $summary['remaining_cash'] = (($summary['cash_sales'] ?? 0) + ($summary['wasel_cash'] ?? 0)) - (($summary['total_cash_expenses'] ?? 0) + ($summary['total_cash_refunds'] ?? 0) + ($summary['total_compensations'] ?? 0) + ($summary['deposits_yer'] ?? 0));
         $summary['remaining_transfer'] = (($summary['transfer_sales'] ?? 0) + ($summary['wasel_transfer'] ?? 0)) - ($summary['total_transfer_expenses'] ?? 0);

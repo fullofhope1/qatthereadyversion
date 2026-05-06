@@ -134,13 +134,17 @@ $custJson = json_encode($customers);
                             <div id="debtWarningText" class="alert alert-warning d-none fw-bold text-center"></div>
                             <label class="form-label fw-bold small">طريقة رد المبلغ</label>
                             <div class="row g-2">
-                                <div class="col-6">
+                                <div class="col-4">
                                     <input type="radio" class="btn-check" name="refund_type" id="rtDebt" value="Debt" checked>
-                                    <label class="btn btn-outline-primary w-100 py-2" for="rtDebt">خصم من الدين</label>
+                                    <label class="btn btn-outline-primary w-100 py-2 px-1" for="rtDebt">خصم من الدين</label>
                                 </div>
-                                <div class="col-6">
+                                <div class="col-4">
                                     <input type="radio" class="btn-check" name="refund_type" id="rtCash" value="Cash">
-                                    <label class="btn btn-outline-success w-100 py-2" for="rtCash">نقدي</label>
+                                    <label class="btn btn-outline-success w-100 py-2 px-1" for="rtCash">نقدي</label>
+                                </div>
+                                <div class="col-4">
+                                    <input type="radio" class="btn-check" name="refund_type" id="rtTransfer" value="Transfer">
+                                    <label class="btn btn-outline-info w-100 py-2 px-1" for="rtTransfer">تحويل بنكي</label>
                                 </div>
                             </div>
                         </div>

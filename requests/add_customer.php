@@ -1,6 +1,7 @@
 <?php
 // requests/add_customer.php
-require '../config/db.php';
+require_once '../config/db.php';
+require_once '../includes/Autoloader.php';
 require_once '../includes/require_auth.php';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $name = trim($_POST['name']);

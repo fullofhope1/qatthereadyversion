@@ -472,7 +472,7 @@ $is_full_admin = (isset($_SESSION['role']) && $_SESSION['role'] === 'super_admin
                 if (data.success) {
                     status.innerHTML = `<div class="alert alert-success small">${data.message}</div>`;
                     
-                    // Web Share API for Mobile
+                    // Web Share API for Mobile with Fallback
                     if (navigator.share && data.filename) {
                         try {
                             const fileUrl = 'backups/' + data.filename;
@@ -483,13 +483,25 @@ $is_full_admin = (isset($_SESSION['role']) && $_SESSION['role'] === 'super_admin
                             if (navigator.canShare && navigator.canShare({ files: [file] })) {
                                 await navigator.share({
                                     files: [file],
-                                    title: 'نسخة احتياطية - القادري وماجد',
-                                    text: 'ملف قاعدة البيانات'
+                                    title: 'نسخة احتياطية - QAT ERP',
+                                    text: 'ملف قاعدة البيانات بتاريخ ' + new Date().toLocaleDateString()
                                 });
+                            } else {
+                                throw new Error('Share not supported for this file');
                             }
                         } catch (shareErr) {
-                            console.log('Sharing failed', shareErr);
+                            console.log('Sharing failed, falling back to download', shareErr);
+                            const link = document.createElement('a');
+                            link.href = 'backups/' + data.filename;
+                            link.download = data.filename;
+                            link.click();
                         }
+                    } else {
+                        // Direct download if share API not available
+                        const link = document.createElement('a');
+                        link.href = 'backups/' + data.filename;
+                        link.download = data.filename;
+                        link.click();
                     }
                 } else {
                     status.innerHTML = `<div class="alert alert-danger small">${data.message}</div>`;

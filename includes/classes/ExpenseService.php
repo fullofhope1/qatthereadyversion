@@ -16,14 +16,19 @@ class ExpenseService extends BaseService
 
     public function addExpense(array $data)
     {
-        // Validation: Check Staff Limit
+        // Validation: Check Staff Limit (Strict Prevention)
         if ($data['category'] === 'Staff' && !empty($data['staff_id'])) {
             $staff = $this->staffRepo->getById($data['staff_id']);
-            if ($staff && $staff['withdrawal_limit'] !== null && $staff['withdrawal_limit'] > 0) {
-                $used = $this->expenseRepo->getTotalStaffWithdrawals($data['staff_id']);
-                $rem = $staff['withdrawal_limit'] - $used;
-                if ($data['amount'] > $rem) {
-                    throw new Exception("تجاوز السقف للعامل (" . $staff['name'] . ")! المتبقي: " . number_format($rem));
+            if ($staff) {
+                // Use withdrawal_limit if set, otherwise fallback to daily_salary
+                $limit = ($staff['withdrawal_limit'] !== null) ? (float)$staff['withdrawal_limit'] : (float)$staff['daily_salary'];
+                
+                if ($limit > 0) {
+                    $used = (float)$this->expenseRepo->getTotalStaffWithdrawals($data['staff_id']);
+                    $rem = $limit - $used;
+                    if ($data['amount'] > $rem + 0.1) {
+                        throw new Exception("تجاوز السقف المسموح للعامل (" . $staff['name'] . ")! الراتب/السقف اليومي: " . number_format($limit) . " - المسحوب مسبقاً: " . number_format($used) . " - المتبقي المتاح: " . number_format($rem));
+                    }
                 }
             }
         }

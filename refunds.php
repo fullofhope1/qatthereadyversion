@@ -172,25 +172,31 @@ $custJson = json_encode($customers);
                         </div>
 
                         <!-- Financial Operation Only -->
-                        <label class="form-label fw-bold d-block mb-2"><i class="fas fa-list me-1 text-warning"></i> نوع العملية</label>
                         <div class="row g-3 mb-4">
-                            <div class="col-6">
+                            <div class="col-4">
                                 <label class="type-card selected" id="card_debt" onclick="selectType('Debt')">
                                     <input type="radio" name="refund_type" value="Debt" id="typeDebt" checked>
                                     <div class="text-center">
-                                        <i class="fas fa-file-invoice-dollar fs-2 text-warning mb-2 d-block"></i>
-                                        <div class="fw-bold">خصم من الدين</div>
-                                        <small class="text-muted">تعويض / خصم على جودة القات</small>
+                                        <i class="fas fa-file-invoice-dollar fs-3 text-warning mb-2 d-block"></i>
+                                        <div class="fw-bold small">خصم دين</div>
                                     </div>
                                 </label>
                             </div>
-                            <div class="col-6">
+                            <div class="col-4">
                                 <label class="type-card" id="card_cash" onclick="selectType('Cash')">
                                     <input type="radio" name="refund_type" value="Cash" id="typeCash">
                                     <div class="text-center">
-                                        <i class="fas fa-money-bill-wave fs-2 text-success mb-2 d-block"></i>
-                                        <div class="fw-bold">استرجاع نقدي</div>
-                                        <small class="text-muted">إعادة مبلغ نقدي للزبون</small>
+                                        <i class="fas fa-money-bill-wave fs-3 text-success mb-2 d-block"></i>
+                                        <div class="fw-bold small">كاش نقدًا</div>
+                                    </div>
+                                </label>
+                            </div>
+                            <div class="col-4">
+                                <label class="type-card" id="card_transfer" onclick="selectType('Transfer')">
+                                    <input type="radio" name="refund_type" value="Transfer" id="typeTransfer">
+                                    <div class="text-center">
+                                        <i class="fas fa-university fs-3 text-info mb-2 d-block"></i>
+                                        <div class="fw-bold small">حوالة</div>
                                     </div>
                                 </label>
                             </div>
@@ -280,8 +286,10 @@ $custJson = json_encode($customers);
                                     <td>
                                         <?php if ($r['refund_type'] == 'Debt'): ?>
                                             <span class="badge bg-warning text-dark">خصم دين</span>
+                                        <?php elseif ($r['refund_type'] == 'Transfer'): ?>
+                                            <span class="badge bg-info text-dark">حوالة</span>
                                         <?php else: ?>
-                                            <span class="badge bg-secondary">نقدي</span>
+                                            <span class="badge bg-secondary">كاش</span>
                                         <?php endif; ?>
                                     </td>
                                     <td class="small text-muted"><?= htmlspecialchars($r['reason']) ?></td>
@@ -394,8 +402,11 @@ $custJson = json_encode($customers);
     function selectType(val) {
         document.getElementById('typeDebt').checked = val === 'Debt';
         document.getElementById('typeCash').checked = val === 'Cash';
+        document.getElementById('typeTransfer').checked = val === 'Transfer';
+        
         document.getElementById('card_debt').classList.toggle('selected', val === 'Debt');
         document.getElementById('card_cash').classList.toggle('selected', val === 'Cash');
+        document.getElementById('card_transfer').classList.toggle('selected', val === 'Transfer');
     }
 
     function goRefundStep(step) {
@@ -428,7 +439,11 @@ $custJson = json_encode($customers);
             if (!valid) return;
 
             document.getElementById('rev_cust').textContent = selectedCustName || '—';
-            document.getElementById('rev_type').textContent = refundType === 'Debt' ? 'خصم من الدين' : 'استرجاع نقدي';
+            let typeLabel = 'خصم من الدين';
+            if (refundType === 'Cash') typeLabel = 'كاش نقدًا';
+            if (refundType === 'Transfer') typeLabel = 'حوالة (رصيد إلكتروني)';
+            
+            document.getElementById('rev_type').textContent = typeLabel;
             document.getElementById('rev_amount').textContent = amount.toLocaleString() + ' ريال';
         }
         [1, 2, 3].forEach(i => {

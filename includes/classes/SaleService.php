@@ -115,10 +115,18 @@ class SaleService extends BaseService
                         throw new Exception($msg);
                     }
                 } elseif (!empty($data['leftover_id'])) {
-                    $totalLeftover = (float)$this->leftoverRepo->getWeight($data['leftover_id'], true);
+                    $leftover = $this->leftoverRepo->getById($data['leftover_id']);
+                    if (!$leftover) throw new Exception("LeftoverNotFound");
+                    
+                    // Logic Improvement: Automatically link this sale to the original purchase for performance tracking
+                    if (!empty($leftover['purchase_id'])) {
+                        $data['purchase_id'] = $leftover['purchase_id'];
+                    }
+
+                    $totalLeftover = (float)$leftover['weight_kg'];
                     $totalSold = (float)$this->saleRepo->getSoldKgByLeftoverId($data['leftover_id']);
                     $available = round($totalLeftover - $totalSold, 3);
-
+                    
                     if ($weightKg > $available) {
                         throw new Exception("LeftoverExceeded|{$available}|{$weightKg}");
                     }

@@ -440,7 +440,17 @@ $shipments = $purchaseRepo->getTodayShipmentsByUserId($today, $user_id);
                                                         <i class="fas fa-percent"></i> خصم
                                                     </button>
                                                 <?php else: ?>
-                                                    <span class="badge bg-warning-subtle text-warning rounded-pill border border-warning-subtle px-2">قيد الشحن</span>
+                                                    <div class="d-flex align-items-center">
+                                                        <span class="badge bg-warning-subtle text-warning rounded-pill border border-warning-subtle px-2 me-2">قيد الشحن</span>
+                                                        <div class="btn-group">
+                                                            <button type="button" class="btn btn-sm btn-light border" onclick="openEditModal(<?= htmlspecialchars(json_encode($p)) ?>)">
+                                                                <i class="fas fa-edit text-primary"></i>
+                                                            </button>
+                                                            <button type="button" class="btn btn-sm btn-light border" onclick="confirmDelete(<?= $p['id'] ?>)">
+                                                                <i class="fas fa-trash-alt text-danger"></i>
+                                                            </button>
+                                                        </div>
+                                                    </div>
                                                 <?php endif; ?>
                                             </div>
                                         </div>
@@ -491,27 +501,82 @@ $shipments = $purchaseRepo->getTodayShipmentsByUserId($today, $user_id);
     </div>
 </div>
 
-<!-- Discount Modal -->
-<div class="modal fade" id="discountModal" tabindex="-1">
+<!-- Edit Shipment Modal -->
+<div class="modal fade" id="editShipmentModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 rounded-4 shadow">
-            <div class="modal-header bg-danger text-white">
-                <h5 class="modal-title fw-bold">تسجيل خصم متأخر</h5>
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title fw-bold">تعديل بيانات الشحنة</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
-            <form action="requests/process_purchase_discount.php" method="POST">
-                <div class="modal-body p-4 text-end">
-                    <input type="hidden" name="purchase_id" id="discount_purchase_id">
-                    <p class="mb-3">تسجيل خصم للشحنة: <b id="discount_info" class="text-danger"></b></p>
+            <form action="requests/update_sourcing.php" method="POST">
+                <div class="modal-body p-4">
+                    <input type="hidden" name="purchase_id" id="edit_purchase_id">
+                    
                     <div class="mb-3">
-                        <label class="small fw-bold mb-1">مبلغ الخصم (ريال) <span class="text-danger">*</span></label>
-                        <input type="number" name="amount" class="form-control form-control-lg rounded-3 fw-bold text-danger text-center" required placeholder="0" inputmode="numeric">
+                        <label class="small fw-bold mb-1">المورد</label>
+                        <select class="form-select rounded-3" name="provider_id" id="edit_provider_id" required>
+                            <?php foreach ($providers as $prov): ?>
+                                <option value="<?= $prov['id'] ?>"><?= htmlspecialchars($prov['name']) ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="small fw-bold mb-1">نوع القات</label>
+                        <select class="form-select rounded-3" name="qat_type_id" id="edit_qat_type_id" required>
+                            <?php foreach ($types as $t): ?>
+                                <option value="<?= $t['id'] ?>"><?= htmlspecialchars($t['name']) ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+
+                    <div id="edit_weight_section" class="row g-2">
+                        <div class="col-6 mb-3">
+                            <label class="small fw-bold mb-1">الوزن (جرام)</label>
+                            <input type="number" name="source_weight_grams" id="edit_weight_grams" class="form-control rounded-3" required>
+                        </div>
+                        <div class="col-6 mb-3">
+                            <label class="small fw-bold mb-1">السعر / كجم</label>
+                            <input type="number" name="price_per_kilo" id="edit_price_per_kilo" class="form-control rounded-3" required>
+                        </div>
+                    </div>
+
+                    <div id="edit_unit_section" class="row g-2 d-none">
+                        <div class="col-6 mb-3">
+                            <label class="small fw-bold mb-1">العدد</label>
+                            <input type="number" name="source_units" id="edit_source_units" class="form-control rounded-3">
+                        </div>
+                        <div class="col-6 mb-3">
+                            <label class="small fw-bold mb-1">سعر الحبة</label>
+                            <input type="number" name="price_per_unit" id="edit_price_per_unit" class="form-control rounded-3">
+                        </div>
                     </div>
                 </div>
                 <div class="modal-footer border-0 p-4 pt-0">
-                    <button type="submit" class="btn btn-danger w-100 rounded-pill fw-bold">تأكيد الخصم</button>
+                    <button type="submit" class="btn btn-primary w-100 rounded-pill fw-bold">حفظ التعديلات</button>
                 </div>
             </form>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteConfirmModal" tabindex="-1">
+    <div class="modal-dialog modal-sm modal-dialog-centered">
+        <div class="modal-content border-0 rounded-4 shadow">
+            <div class="modal-body p-4 text-center">
+                <i class="fas fa-exclamation-circle fa-3x text-danger mb-3"></i>
+                <h5 class="fw-bold">هل أنت متأكد؟</h5>
+                <p class="text-muted small">سيتم حذف بيانات الشحنة نهائياً من سجل اليوم.</p>
+                <form action="requests/delete_sourcing.php" method="POST">
+                    <input type="hidden" name="purchase_id" id="delete_purchase_id">
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-light w-100 rounded-pill" data-bs-dismiss="modal">إلغاء</button>
+                        <button type="submit" class="btn btn-danger w-100 rounded-pill fw-bold">نعم، احذف</button>
+                    </div>
+                </form>
+            </div>
         </div>
     </div>
 </div>
@@ -521,6 +586,31 @@ $shipments = $purchaseRepo->getTodayShipmentsByUserId($today, $user_id);
         document.getElementById('discount_purchase_id').value = id;
         document.getElementById('discount_info').innerText = provider + " (" + type + ")";
         new bootstrap.Modal(document.getElementById('discountModal')).show();
+    }
+
+    function openEditModal(data) {
+        document.getElementById('edit_purchase_id').value = data.id;
+        document.getElementById('edit_provider_id').value = data.provider_id;
+        document.getElementById('edit_qat_type_id').value = data.qat_type_id;
+
+        if (data.unit_type === 'weight') {
+            document.getElementById('edit_weight_section').classList.remove('d-none');
+            document.getElementById('edit_unit_section').classList.add('d-none');
+            document.getElementById('edit_weight_grams').value = data.source_weight_grams;
+            document.getElementById('edit_price_per_kilo').value = data.price_per_kilo;
+        } else {
+            document.getElementById('edit_weight_section').classList.add('d-none');
+            document.getElementById('edit_unit_section').classList.remove('d-none');
+            document.getElementById('edit_source_units').value = data.source_units;
+            document.getElementById('edit_price_per_unit').value = data.price_per_unit;
+        }
+
+        new bootstrap.Modal(document.getElementById('editShipmentModal')).show();
+    }
+
+    function confirmDelete(id) {
+        document.getElementById('delete_purchase_id').value = id;
+        new bootstrap.Modal(document.getElementById('deleteConfirmModal')).show();
     }
 
     // Weight & Price Logic

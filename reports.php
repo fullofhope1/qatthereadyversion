@@ -87,12 +87,12 @@ $tomorrowDue = $overview['tomorrow_due'];
 $listRefunds = $overview['refunds'];
 
 // Tab-specific data
-$listSales = ($view === 'Sales' || $view === 'Printable') ? $service->getDetailedViewData('Sales', $reportType, $date, $month, $year, $provider_id, $report_user_id) : [];
-$listPurch = ($view === 'Receiving' || $view === 'Printable') ? $service->getDetailedViewData('Receiving', $reportType, $date, $month, $year, null, null) : [];
-$listExp = ($view === 'Expenses' || $view === 'Printable') ? $service->getDetailedViewData('Expenses', $reportType, $date, $month, $year, null, $report_user_id) : [];
-$listWaste = ($view === 'Waste' || $view === 'Printable') ? $service->getDetailedViewData('Waste', $reportType, $date, $month, $year, null, null) : [];
-$listStaff = ($view === 'Staff') ? $service->getDetailedViewData('Staff', $reportType, $date, $month, $year) : [];
-$listShipments = ($view === 'Shipments') ? $service->getDetailedViewData('Shipments', $reportType, $date, $month, $year) : [];
+$listSales = ($view === 'Sales' || $view === 'Printable') ? $service->getDetailedViewData('Sales', $reportType, $date, $month, $year, $provider_id, $report_user_id, $report_role) : [];
+$listPurch = ($view === 'Receiving' || $view === 'Printable') ? $service->getDetailedViewData('Receiving', $reportType, $date, $month, $year, null, null, $report_role) : [];
+$listExp = ($view === 'Expenses' || $view === 'Printable') ? $service->getDetailedViewData('Expenses', $reportType, $date, $month, $year, null, $report_user_id, $report_role) : [];
+$listWaste = ($view === 'Waste' || $view === 'Printable') ? $service->getDetailedViewData('Waste', $reportType, $date, $month, $year, null, null, $report_role) : [];
+$listStaff = ($view === 'Staff') ? $service->getDetailedViewData('Staff', $reportType, $date, $month, $year, null, $report_user_id, $report_role) : [];
+$listShipments = ($view === 'Shipments') ? $service->getDetailedViewData('Shipments', $reportType, $date, $month, $year, null, null, $report_role) : [];
 $listCust = ($view === 'Customers') ? $service->getDetailedViewData('Customers', $reportType, $date, $month, $year) : [];
 $listLO1 = ($view === 'Leftovers_1') ? $service->getDetailedViewData('Leftovers_1', $reportType, $date, $month, $year) : [];
 $listLO2 = ($view === 'Leftovers_2') ? $service->getDetailedViewData('Leftovers_2', $reportType, $date, $month, $year) : [];
@@ -101,7 +101,7 @@ $listDeposits = ($view === 'Deposits') ? $service->getDetailedViewData('Deposits
 
 // --- SUMMARY & CASH CALCULATION ---
 if (in_array($view, ['Summary', 'Printable', 'Dashboard'])) {
-    $cashSummary = $service->getCashSummary($reportType, $date, $month, $year, $report_user_id);
+    $cashSummary = $service->getCashSummary($reportType, $date, $month, $year, $report_user_id, $report_role);
     $remainingCash = $cashSummary['remaining_cash'];
     $cashSales = $cashSummary['cash_sales'];
     $collectedPayments = $cashSummary['wasel_cash'] ?? 0;

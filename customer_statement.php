@@ -42,7 +42,11 @@ $salesStmt = $pdo->prepare(
     "
     SELECT s.sale_date as t_date,
            CASE WHEN s.payment_method = 'Debt' THEN 'بيع آجل' ELSE CONCAT('بيع (' , s.payment_method, ')') END as t_type,
-           CONCAT(COALESCE(t.name,'?'), ' (', COALESCE(s.weight_kg, s.quantity_units), ' ', CASE WHEN s.unit_type='weight' THEN 'كجم' ELSE 'وحدة' END, ')') as t_desc,
+           CONCAT(COALESCE(t.name,'?'), ' (', 
+             CASE WHEN s.unit_type = 'weight' THEN s.weight_kg ELSE s.quantity_units END, 
+             ' ', 
+             CASE WHEN s.unit_type = 'weight' THEN 'كجم' ELSE 'وحدة' END, 
+           ')') as t_desc,
            s.price as debit,
            CASE WHEN s.payment_method != 'Debt' THEN s.price ELSE 0 END as credit,
            s.id as ref_id,

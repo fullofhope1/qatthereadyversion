@@ -16,10 +16,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $refundRepo = new RefundRepository($pdo);
     $customerRepo = new CustomerRepository($pdo);
     $saleRepo = new SaleRepository($pdo);
-    $purchaseRepo = new PurchaseRepository($pdo);
-    $leftoverRepo = new LeftoverRepository($pdo);
+    $reportRepo = new ReportRepository($pdo);
 
-    $service = new RefundService($refundRepo, $customerRepo, $saleRepo, $purchaseRepo, $leftoverRepo);
+    $service = new RefundService($refundRepo, $customerRepo, $saleRepo, $purchaseRepo, $leftoverRepo, $reportRepo);
 
     $data = [
         'customer_id'    => $_POST['customer_id'],

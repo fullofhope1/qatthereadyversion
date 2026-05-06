@@ -27,37 +27,49 @@ class ReportRepository extends BaseRepository
         list($whereExp, $paramsExp) = $this->getWhereAndParams($reportType, $date, $month, $year, 'e.expense_date');
 
         // Isolation Logic: Filter ALL metrics by the creator's role (Merchant team vs Supplier team)
-        $whereSales .= " AND u.role = ?";
-        $paramsSales[] = $role;
-        
-        $wherePurch .= " AND u.role = ?";
-        $paramsPurch[] = $role;
-        
-        $whereExp .= " AND u.role = ?";
-        $paramsExp[] = $role;
+        // Super Admin (Owner) can see Merchant (Super Admin/Sales/Staff), Supplier (Admin) data, and legacy records (NULL role)
+        if ($role === 'super_admin') {
+            $roleFilter = " AND ((u.role IN ('super_admin', 'admin', 'user') OR u.role IS NULL) OR u.role IS NULL)";
+        } else {
+            $roleFilter = " AND u.role = ?";
+            $paramsSales[] = $role;
+            $paramsPurch[] = $role;
+            $paramsExp[] = $role;
+        }
 
-        $grossSales = $this->fetchColumn("SELECT SUM(s.price) FROM sales s JOIN users u ON s.created_by = u.id $whereSales AND s.is_returned = 0", $paramsSales) ?: 0;
-        $totalRefunds = $this->fetchColumn("SELECT SUM(s.refund_amount) FROM sales s JOIN users u ON s.created_by = u.id $whereSales AND s.is_returned = 0", $paramsSales) ?: 0;
+        $whereSales .= $roleFilter;
+        $wherePurch .= $roleFilter;
+        $whereExp .= $roleFilter;
+
+        $grossSales = $this->fetchColumn("SELECT SUM(s.price) FROM sales s LEFT JOIN users u ON s.created_by = u.id $whereSales AND s.is_returned = 0", $paramsSales) ?: 0;
+        $totalRefunds = $this->fetchColumn("SELECT SUM(s.refund_amount) FROM sales s LEFT JOIN users u ON s.created_by = u.id $whereSales AND s.is_returned = 0", $paramsSales) ?: 0;
         $totalSales = $grossSales - $totalRefunds;
 
         // HIGH ACCURACY PROFIT METRICS
-        $totalPurchases = $this->fetchColumn("SELECT SUM(p.net_cost - p.discount_amount) FROM purchases p JOIN users u ON p.created_by = u.id $wherePurch", $paramsPurch) ?: 0;
+        $totalPurchases = $this->fetchColumn("SELECT SUM(p.net_cost - p.discount_amount) FROM purchases p LEFT JOIN users u ON p.created_by = u.id $wherePurch", $paramsPurch) ?: 0;
         $totalCogs = $this->calculateCogs($reportType, $date, $month, $year, $role);
         $totalWasteValue = $this->calculateDroppedCost($reportType, $date, $month, $year, $role);
-        $totalExpenses = $this->fetchColumn("SELECT SUM(e.amount) FROM expenses e JOIN users u ON e.created_by = u.id $whereExp AND e.category != 'تسديد مورد'", $paramsExp) ?: 0;
-        $totalProviderPayments = $this->fetchColumn("SELECT SUM(e.amount) FROM expenses e JOIN users u ON e.created_by = u.id $whereExp AND e.category = 'تسديد مورد'", $paramsExp) ?: 0;
+        $totalExpenses = $this->fetchColumn("SELECT SUM(e.amount) FROM expenses e LEFT JOIN users u ON e.created_by = u.id $whereExp AND e.category != 'تسديد مورد'", $paramsExp) ?: 0;
+        $totalProviderPayments = $this->fetchColumn("SELECT SUM(e.amount) FROM expenses e LEFT JOIN users u ON e.created_by = u.id $whereExp AND e.category = 'تسديد مورد'", $paramsExp) ?: 0;
         
         // FIX #10: Include compensations/refunds in profit calculation
         $totalCompensations = 0;
         try {
             list($whereRef, $paramsRef) = $this->getWhereAndParams($reportType, $date, $month, $year, 'DATE(r.created_at)');
-            $whereRef .= " AND u.role = ?";
-            $paramsRef[] = $role;
-            $totalCompensations = (float)$this->fetchColumn("SELECT SUM(r.amount) FROM refunds r JOIN users u ON r.created_by = u.id $whereRef AND (r.weight_kg = 0 AND r.quantity_units = 0)", $paramsRef) ?: 0;
+            if ($role === 'super_admin') {
+                $whereRef .= " AND ((u.role IN ('super_admin', 'admin', 'user') OR u.role IS NULL) OR u.role IS NULL)";
+            } else {
+                $whereRef .= " AND u.role = ?";
+                $paramsRef[] = $role;
+            }
+            // We no longer subtract totalCompensations here because they are already part of totalRefunds 
+            // which is subtracted from grossSales to get totalSales.
+            $totalCompensations = (float)$this->fetchColumn("SELECT SUM(r.amount) FROM refunds r LEFT JOIN users u ON r.created_by = u.id $whereRef AND (r.weight_kg = 0 AND r.quantity_units = 0)", $paramsRef) ?: 0;
         } catch (Exception $e) {}
 
-        // Final Calculation: Sales - (Cost of what was sold) - (Cost of what was trashed today) - Expenses - Compensations
-        $realProfit = $totalSales - $totalCogs - $totalWasteValue - $totalExpenses - $totalCompensations;
+        // Final Calculation: Sales - (Cost of what was sold) - (Cost of what was trashed today) - Expenses
+        // Note: totalSales already has all refunds (physical + compensations) subtracted.
+        $realProfit = $totalSales - $totalCogs - $totalWasteValue - $totalExpenses;
 
         // Current Inventory Value (What is currently in stock)
         $currentInventoryValue = $this->getInventoryValue();
@@ -78,36 +90,90 @@ class ReportRepository extends BaseRepository
 
     public function getInventoryValue()
     {
-        // Calculate value of remaining items in leftovers (not dropped)
-        $sql = "SELECT SUM(
-                    CASE 
-                        WHEN l.unit_type = 'weight' THEN (l.weight_kg * p.price_per_kilo)
-                        ELSE (l.quantity_units * p.price_per_unit)
-                    END
-                ) 
-                FROM leftovers l
-                JOIN purchases p ON l.purchase_id = p.id
-                WHERE l.status NOT IN ('Dropped', 'Auto_Dropped')";
+        $sql = "
+            SELECT (
+                -- 1. Value of Fresh Purchases (unsold portion)
+                COALESCE((
+                    SELECT SUM(
+                        CASE 
+                            WHEN p.unit_type = 'weight' THEN 
+                                (p.quantity_kg - COALESCE(s.sold_kg, 0) - COALESCE(l.leftover_kg, 0)) * p.price_per_kilo
+                            ELSE 
+                                (p.received_units - COALESCE(s.sold_units, 0) - COALESCE(l.leftover_units, 0)) * p.price_per_unit
+                        END
+                    )
+                    FROM purchases p
+                    LEFT JOIN (
+                        SELECT purchase_id, 
+                               SUM(COALESCE(weight_kg, weight_grams/1000) - COALESCE(returned_kg, 0)) as sold_kg,
+                               SUM(quantity_units - COALESCE(returned_units, 0)) as sold_units
+                        FROM sales WHERE purchase_id IS NOT NULL AND is_returned = 0 GROUP BY purchase_id
+                    ) s ON p.id = s.purchase_id
+                    LEFT JOIN (
+                        SELECT purchase_id, SUM(weight_kg) as leftover_kg, SUM(quantity_units) as leftover_units
+                        FROM leftovers 
+                        WHERE status != 'Reception_Loss' 
+                        GROUP BY purchase_id
+                    ) l ON p.id = l.purchase_id
+                    WHERE p.is_received = 1 AND p.status IN ('Fresh', 'Momsi')
+                ), 0)
+                +
+                -- 2. Value of Active Leftovers (unsold portion)
+                COALESCE((
+                    SELECT SUM(
+                        CASE 
+                            WHEN l.unit_type = 'weight' THEN 
+                                (l.weight_kg - COALESCE(s.sold_kg, 0)) * p.price_per_kilo
+                            ELSE 
+                                (l.quantity_units - COALESCE(s.sold_units, 0)) * p.price_per_unit
+                        END
+                    )
+                    FROM leftovers l
+                    JOIN purchases p ON l.purchase_id = p.id
+                    LEFT JOIN (
+                        SELECT leftover_id, 
+                               SUM(COALESCE(weight_kg, weight_grams/1000) - COALESCE(returned_kg, 0)) as sold_kg,
+                               SUM(quantity_units - COALESCE(returned_units, 0)) as sold_units
+                        FROM sales WHERE leftover_id IS NOT NULL AND is_returned = 0 GROUP BY leftover_id
+                    ) s ON l.id = s.leftover_id
+                    WHERE l.status IN ('Transferred_Next_Day', 'Auto_Momsi', 'Momsi_Day_1', 'Momsi_Day_2')
+                ), 0)
+            ) as total_value";
+            
         return (float)$this->fetchColumn($sql) ?: 0;
     }
 
     private function calculateCogs($reportType, $date, $month, $year, $role = 'super_admin')
     {
         list($where, $params) = $this->getWhereAndParams($reportType, $date, $month, $year, 's.sale_date');
-        $where .= " AND u.role = ?";
-        $params[] = $role;
+        if ($role === 'super_admin') {
+            $where .= " AND (u.role IN ('super_admin', 'admin', 'user') OR u.role IS NULL)";
+        } else {
+            $where .= " AND u.role = ?";
+            $params[] = $role;
+        }
 
         $sql = "SELECT SUM(
                     CASE 
                         WHEN s.purchase_id IS NOT NULL THEN 
-                            (CASE WHEN s.unit_type = 'weight' THEN ((s.weight_grams/1000 - COALESCE(s.returned_kg, 0)) * p.price_per_kilo) ELSE ((s.quantity_units - COALESCE(s.returned_units, 0)) * p.price_per_unit) END)
+                            (CASE 
+                                WHEN s.unit_type = 'weight' THEN 
+                                    ((s.weight_grams/1000 - COALESCE(s.returned_kg, 0)) * ((p.agreed_price - p.discount_amount) / NULLIF(p.quantity_kg, 0))) 
+                                ELSE 
+                                    ((s.quantity_units - COALESCE(s.returned_units, 0)) * ((p.agreed_price - p.discount_amount) / NULLIF(p.received_units, 0))) 
+                            END)
                         WHEN s.leftover_id IS NOT NULL THEN 
-                            (CASE WHEN s.unit_type = 'weight' THEN ((s.weight_grams/1000 - COALESCE(s.returned_kg, 0)) * pl.price_per_kilo) ELSE ((s.quantity_units - COALESCE(s.returned_units, 0)) * pl.price_per_unit) END)
+                            (CASE 
+                                WHEN s.unit_type = 'weight' THEN 
+                                    ((s.weight_grams/1000 - COALESCE(s.returned_kg, 0)) * ((pl.agreed_price - pl.discount_amount) / NULLIF(pl.quantity_kg, 0))) 
+                                ELSE 
+                                    ((s.quantity_units - COALESCE(s.returned_units, 0)) * ((pl.agreed_price - pl.discount_amount) / NULLIF(pl.received_units, 0))) 
+                            END)
                         ELSE 0 
                     END
                 ) as total_cost
                 FROM sales s
-                JOIN users u ON s.created_by = u.id
+                LEFT JOIN users u ON s.created_by = u.id
                 LEFT JOIN purchases p ON s.purchase_id = p.id
                 LEFT JOIN leftovers l ON s.leftover_id = l.id
                 LEFT JOIN purchases pl ON l.purchase_id = pl.id
@@ -119,18 +185,24 @@ class ReportRepository extends BaseRepository
     private function calculateDroppedCost($reportType, $date, $month, $year, $role = 'super_admin')
     {
         list($where, $params) = $this->getWhereAndParams($reportType, $date, $month, $year, 'l.decision_date');
-        $where .= " AND u.role = ?";
-        $params[] = $role;
+        if ($role === 'super_admin') {
+            $where .= " AND (u.role IN ('super_admin', 'admin', 'user') OR u.role IS NULL)";
+        } else {
+            $where .= " AND u.role = ?";
+            $params[] = $role;
+        }
         
         $sql = "SELECT SUM(
                     CASE 
-                        WHEN l.unit_type = 'weight' THEN (l.weight_kg * p.price_per_kilo)
-                        ELSE (l.quantity_units * p.price_per_unit)
+                        WHEN l.unit_type = 'weight' THEN 
+                            (l.weight_kg * ((p.agreed_price - p.discount_amount) / NULLIF(p.quantity_kg, 0)))
+                        ELSE 
+                            (l.quantity_units * ((p.agreed_price - p.discount_amount) / NULLIF(p.received_units, 0)))
                     END
                 ) as total_waste_value
                 FROM leftovers l
                 JOIN purchases p ON l.purchase_id = p.id
-                JOIN users u ON l.created_by = u.id
+                LEFT JOIN users u ON l.created_by = u.id
                 $where AND l.status IN ('Dropped', 'Auto_Dropped')";
         
         return (float)$this->fetchColumn($sql, $params) ?: 0;
@@ -154,9 +226,16 @@ class ReportRepository extends BaseRepository
         return $this->fetchAll($sql, $params);
     }
 
-    public function getSalesList($reportType, $date, $month, $year, $providerId = null)
+    public function getSalesList($reportType, $date, $month, $year, $providerId = null, $role = 'super_admin')
     {
         list($where, $params) = $this->getWhereAndParams($reportType, $date, $month, $year, 's.sale_date');
+        
+        if ($role === 'super_admin') {
+            $where .= " AND (u.role IN ('super_admin', 'admin', 'user') OR u.role IS NULL)";
+        } else {
+            $where .= " AND u.role = ?";
+            $params[] = $role;
+        }
 
         if ($providerId) {
             $where .= " AND COALESCE(p.provider_id, lp.provider_id) = ?";
@@ -169,6 +248,7 @@ class ReportRepository extends BaseRepository
                        t.name as type_name,
                        COALESCE(prov.name, lprov.name) as prov_name
                 FROM sales s
+                LEFT JOIN users u ON s.created_by = u.id
                 LEFT JOIN customers c    ON s.customer_id = c.id
                 LEFT JOIN qat_types t    ON s.qat_type_id = t.id
                 LEFT JOIN purchases p    ON s.purchase_id = p.id
@@ -180,36 +260,65 @@ class ReportRepository extends BaseRepository
         return $this->fetchAll($sql, $params);
     }
 
-    public function getPurchasesList($reportType, $date, $month, $year)
+    public function getPurchasesList($reportType, $date, $month, $year, $role = 'super_admin')
     {
         list($where, $params) = $this->getWhereAndParams($reportType, $date, $month, $year, 'p.purchase_date');
-        $sql = "SELECT p.*, t.name as type_name, prov.name as prov_name, (p.net_cost - p.discount_amount) as final_cost 
+        
+        if ($role === 'super_admin') {
+            $where .= " AND (u.role IN ('super_admin', 'admin', 'user') OR u.role IS NULL)";
+        } else {
+            $where .= " AND u.role = ?";
+            $params[] = $role;
+        }
+
+        $sql = "SELECT p.*, t.name as type_name, prov.name as prov_name, u.username as creator_name, (p.net_cost - p.discount_amount) as final_cost 
                 FROM purchases p 
+                LEFT JOIN users u ON p.created_by = u.id
                 LEFT JOIN qat_types t ON p.qat_type_id = t.id 
                 LEFT JOIN providers prov ON p.provider_id = prov.id
                 $where ORDER BY p.id DESC";
         return $this->fetchAll($sql, $params);
     }
 
-    public function getExpensesList($reportType, $date, $month, $year, $userId = null)
+    public function getExpensesList($reportType, $date, $month, $year, $userId = null, $role = 'super_admin')
     {
         list($where, $params) = $this->getWhereAndParams($reportType, $date, $month, $year, 'e.expense_date');
 
-        // Filter expenses by user to separate admin/super_admin data
-        if ($userId !== null) {
+        if ($role === 'super_admin') {
+            $where .= " AND (u.role IN ('super_admin', 'admin', 'user') OR u.role IS NULL)";
+        } else {
+            $where .= " AND u.role = ?";
+            $params[] = $role;
+        }
+
+        // Filter expenses by user ONLY for non-super_admin roles to maintain team isolation
+        if ($role !== 'super_admin' && $userId !== null) {
             $where .= " AND e.created_by = ?";
             $params[] = $userId;
         }
 
-        $sql = "SELECT e.*, s.name as staff_name FROM expenses e LEFT JOIN staff s ON e.staff_id = s.id $where ORDER BY e.id DESC";
+        $sql = "SELECT e.*, s.name as staff_name, u.username as creator_name 
+                FROM expenses e 
+                LEFT JOIN users u ON e.created_by = u.id
+                LEFT JOIN staff s ON e.staff_id = s.id 
+                $where ORDER BY e.id DESC";
         return $this->fetchAll($sql, $params);
     }
 
-    public function getWasteList($reportType, $date, $month, $year)
+    public function getWasteList($reportType, $date, $month, $year, $role = 'super_admin')
     {
         list($where, $params) = $this->getWhereAndParams($reportType, $date, $month, $year, 'l.sale_date');
-        $sql = "SELECT l.*, t.name as type_name, prov.name as prov_name 
+        
+        if ($role === 'super_admin') {
+            $where .= " AND (u.role IN ('super_admin', 'admin', 'user') OR u.role IS NULL)";
+        } else {
+            $where .= " AND u.role = ?";
+            $params[] = $role;
+        }
+
+        $sql = "SELECT l.*, t.name as type_name, prov.name as prov_name, u.username as creator_name 
                 FROM leftovers l 
+                LEFT JOIN users u ON l.created_by = u.id
                 LEFT JOIN qat_types t ON l.qat_type_id = t.id
                 LEFT JOIN purchases p ON l.purchase_id = p.id
                 LEFT JOIN providers prov ON p.provider_id = prov.id
@@ -217,7 +326,7 @@ class ReportRepository extends BaseRepository
         return $this->fetchAll($sql, $params);
     }
 
-    public function getCashSummary($reportType, $date, $month, $year, $userId = null)
+    public function getCashSummary($reportType, $date, $month, $year, $userId = null, $role = 'super_admin')
     {
         list($whereSales, $paramsSales) = $this->getWhereAndParams($reportType, $date, $month, $year, 'sale_date');
         list($wherePay, $paramsPay) = $this->getWhereAndParams($reportType, $date, $month, $year, 'payment_date');
@@ -241,8 +350,8 @@ class ReportRepository extends BaseRepository
         // Compensations are refunds with 0 quantity (rebates) - only count Cash ones for drawer
         $totalCompensations = (float)$this->fetchColumn("SELECT SUM(amount) FROM refunds $whereRefunds AND (weight_kg = 0 AND quantity_units = 0) AND refund_type = 'Cash'", $paramsRefunds) ?: 0;
 
-        // 4. Expenses
-        if ($userId !== null) {
+        // Filter expenses by user ONLY for non-super_admin roles to maintain team isolation
+        if ($role !== 'super_admin' && $userId !== null) {
             $whereExp .= " AND created_by = ?";
             $paramsExp[] = $userId;
         }
@@ -360,7 +469,7 @@ class ReportRepository extends BaseRepository
     {
         $methods = "'Kuraimi Deposit', 'Jayb Deposit', 'Internal Transfer', 'Transfer'";
         
-        $electronicSales = $this->fetchColumn("SELECT SUM(paid_amount - COALESCE(refund_amount, 0)) FROM sales WHERE payment_method IN ($methods) AND is_returned = 0") ?: 0;
+        $electronicSales = $this->fetchColumn("SELECT SUM(paid_amount) FROM sales WHERE payment_method IN ($methods) AND is_returned = 0") ?: 0;
         $electronicPayments = $this->fetchColumn("SELECT SUM(amount) FROM payments WHERE payment_method != 'Cash'") ?: 0;
         
         // Subtract bank deposits (outflow from electronic drawer to bank)
@@ -369,7 +478,10 @@ class ReportRepository extends BaseRepository
         // Subtract expenses paid via transfer
         $electronicExpenses = $this->fetchColumn("SELECT SUM(amount) FROM expenses WHERE payment_method = 'Transfer'") ?: 0;
         
-        return $electronicSales + $electronicPayments - $depositsOut - $electronicExpenses;
+        // Subtract refunds paid via transfer (FIX: This is more accurate than subtracting all sale refund_amounts)
+        $transferRefunds = $this->fetchColumn("SELECT SUM(amount) FROM refunds WHERE refund_type = 'Transfer'") ?: 0;
+        
+        return $electronicSales + $electronicPayments - $depositsOut - $electronicExpenses - $transferRefunds;
     }
 
     public function getDepositsList($reportType, $date, $month, $year)
@@ -428,7 +540,7 @@ class ReportRepository extends BaseRepository
         return $this->fetchAll($sql, $params);
     }
 
-    public function getStaffStats($reportType, $date, $month, $year, $userId = null)
+    public function getStaffStats($reportType, $date, $month, $year, $userId = null, $role = 'super_admin')
     {
         // Build date filter for expenses (goes in the JOIN ON clause)
         if ($reportType === 'Monthly') {
@@ -450,7 +562,7 @@ class ReportRepository extends BaseRepository
                 FROM staff s
                 LEFT JOIN expenses e ON e.staff_id = s.id AND {$dateFilter}";
 
-        if ($userId !== null) {
+        if ($role !== 'super_admin' && $userId !== null) {
             $sql .= " WHERE s.created_by = ?";
             $paramsExp[] = $userId;
         }
@@ -537,9 +649,16 @@ class ReportRepository extends BaseRepository
         return $this->fetchAll($sql, [$staffId]);
     }
 
-    public function getShipmentPerformance($reportType, $date, $month, $year)
+    public function getShipmentPerformance($reportType, $date, $month, $year, $role = 'super_admin')
     {
         list($where, $params) = $this->getWhereAndParams($reportType, $date, $month, $year, 'p.purchase_date');
+
+        if ($role === 'super_admin') {
+            $where .= " AND (u.role IN ('super_admin', 'admin', 'user') OR u.role IS NULL)";
+        } else {
+            $where .= " AND u.role = ?";
+            $params[] = $role;
+        }
 
         $sql = "SELECT 
                     p.id,
@@ -556,8 +675,10 @@ class ReportRepository extends BaseRepository
                     COALESCE(s.momsi2_kg, 0) as momsi2_kg,
                     COALESCE(w.waste_kg, 0) as waste_kg,
                     COALESCE(l.remaining_kg, 0) as remaining_kg,
-                    (COALESCE(s.total_revenue, 0) - (p.net_cost - p.discount_amount)) as net_profit
+                    (COALESCE(s.total_revenue, 0) - (p.net_cost - p.discount_amount)) as net_profit,
+                    u.username as creator_name
                 FROM purchases p
+                LEFT JOIN users u ON p.created_by = u.id
                 JOIN providers pr ON p.provider_id = pr.id
                 JOIN qat_types qt ON p.qat_type_id = qt.id
                 LEFT JOIN (

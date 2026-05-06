@@ -567,15 +567,21 @@ foreach ($expenses as $e) {
         }
 
         const s = staffData.find(item => item.id == staffId);
-        if (s && s.withdrawal_limit > 0) {
+        if (s) {
             const current = parseFloat(s.current_withdrawals || 0);
-            const limit = parseFloat(s.withdrawal_limit);
+            // Use withdrawal_limit if exists, else fallback to daily_salary
+            const limit = s.withdrawal_limit !== null ? parseFloat(s.withdrawal_limit) : parseFloat(s.daily_salary);
             const rem = limit - current;
+
+            if (limit <= 0) {
+                warning.style.display = 'none';
+                return;
+            }
 
             warning.style.display = 'block';
             if (rem <= 0) {
                 warning.className = 'mt-2 small fw-bold text-danger';
-                warning.innerHTML = `<i class="fas fa-exclamation-triangle"></i> تجاوز السقف! المسحوب: ${Math.round(current)} | السقف: ${Math.round(limit)}`;
+                warning.innerHTML = `<i class="fas fa-exclamation-triangle"></i> تجاوز السقف! المسحوب: ${Math.round(current)} | الراتب: ${Math.round(limit)}`;
             } else if (rem < (limit * 0.2)) {
                 warning.className = 'mt-2 small fw-bold text-warning';
                 warning.innerHTML = `<i class="fas fa-info-circle"></i> اقترب من السقف! المتبقي: ${Math.round(rem)}`;

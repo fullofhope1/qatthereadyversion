@@ -55,14 +55,14 @@ class SaleRepository extends BaseRepository
     public function getSoldKgByPurchaseId($purchaseId)
     {
         $sold = $this->fetchColumn("SELECT SUM(COALESCE(weight_kg, weight_grams/1000) - COALESCE(returned_kg, 0)) FROM sales WHERE purchase_id = ? AND is_returned = 0", [$purchaseId]) ?: 0;
-        $leftovers = $this->fetchColumn("SELECT SUM(weight_kg) FROM leftovers WHERE purchase_id = ?", [$purchaseId]) ?: 0;
+        $leftovers = $this->fetchColumn("SELECT SUM(weight_kg) FROM leftovers WHERE purchase_id = ? AND status != 'Reception_Loss'", [$purchaseId]) ?: 0;
         return (float)$sold + (float)$leftovers;
     }
 
     public function getSoldUnitsByPurchaseId($purchaseId)
     {
         $sold = $this->fetchColumn("SELECT SUM(quantity_units - COALESCE(returned_units, 0)) FROM sales WHERE purchase_id = ? AND is_returned = 0", [$purchaseId]) ?: 0;
-        $leftovers = $this->fetchColumn("SELECT SUM(quantity_units) FROM leftovers WHERE purchase_id = ?", [$purchaseId]) ?: 0;
+        $leftovers = $this->fetchColumn("SELECT SUM(quantity_units) FROM leftovers WHERE purchase_id = ? AND status != 'Reception_Loss'", [$purchaseId]) ?: 0;
         return (int)$sold + (int)$leftovers;
     }
 
@@ -129,7 +129,9 @@ class SaleRepository extends BaseRepository
                 ) s ON p.id = s.purchase_id
                 LEFT JOIN (
                     SELECT purchase_id, SUM(weight_kg) as leftover_kg, SUM(quantity_units) as leftover_units
-                    FROM leftovers GROUP BY purchase_id
+                    FROM leftovers 
+                    WHERE status != 'Reception_Loss'
+                    GROUP BY purchase_id
                 ) l ON p.id = l.purchase_id
                 WHERE (s.purchase_id IS NOT NULL OR l.purchase_id IS NOT NULL)";
         

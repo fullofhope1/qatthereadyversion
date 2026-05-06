@@ -62,8 +62,9 @@ class DailyCloseRepository extends BaseRepository
                 ->execute([$l['source_date'], $l['purchase_id'], $l['qat_type_id'], $surplusKg, $surplusUnits, $l['unit_type'], $currentDate, $currentDate]);
         }
 
-        // Close the record
-        return $this->pdo->prepare("UPDATE leftovers SET status = 'Dropped' WHERE id = ?")->execute([$leftoverId]);
+        // Close the record as 'Processed' to avoid double-counting its original weight as waste.
+        // The actual waste (surplus) has already been recorded as 'Auto_Dropped' above.
+        return $this->pdo->prepare("UPDATE leftovers SET status = 'Closed' WHERE id = ?")->execute([$leftoverId]);
     }
 
     public function trashMomsiPurchase($purchaseId, $currentDate)

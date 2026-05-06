@@ -10,25 +10,30 @@ class RefundService
     private $purchaseRepo;
     private $leftoverRepo;
 
+    private $reportRepo;
+
     public function __construct(
         $refundRepo,
         $customerRepo,
         $saleRepo,
         $purchaseRepo = null,
-        $leftoverRepo = null
+        $leftoverRepo = null,
+        $reportRepo = null
     ) {
         $this->refundRepo = $refundRepo;
         $this->customerRepo = $customerRepo;
         $this->saleRepo = $saleRepo;
         $this->purchaseRepo = $purchaseRepo;
         $this->leftoverRepo = $leftoverRepo;
+        $this->reportRepo = $reportRepo;
     }
 
     public function getRefundDashboardData()
     {
         return [
             'customers' => $this->customerRepo->getAllActive(),
-            'recent_refunds' => $this->refundRepo->getRecentRefunds(10)
+            'recent_refunds' => $this->refundRepo->getRecentRefunds(10),
+            'electronic_balance' => $this->reportRepo ? $this->reportRepo->getElectronicBalance() : 0
         ];
     }
 
@@ -117,6 +122,14 @@ class RefundService
                         throw new Exception("المبلغ المرتجع ($amount) أكبر من إجمالي دين العميل (" . number_format($customerDebt) . ").");
                     }
                 }
+                
+                // D. Transfer check
+                if ($refundType === 'Transfer' && $this->reportRepo) {
+                    $electronicBalance = $this->reportRepo->getElectronicBalance();
+                    if ($amount > $electronicBalance + 0.01) {
+                         throw new Exception("المبلغ المرتجع ($amount) أكبر من الرصيد الإلكتروني المتوفر (" . number_format($electronicBalance) . ").");
+                    }
+                }
             }
 
             // 2. Create refund record
@@ -124,19 +137,20 @@ class RefundService
             $data['unit_type'] = $unitType;
             $this->refundRepo->create($data);
 
-            // 3. Financial Adjustments
-            if ($refundType === 'Debt') {
-                $customerId = $data['customer_id'];
-                // A. Direct customer balance update
-                $this->customerRepo->decrementDebt($customerId, $amount);
-            }
-
-            // B. Apply refund and return quantities to the specific sale record for ALL refund types (Cash/Debt)
-            // This ensures Net Sales is universally accurate and handles the new returned_kg/units fields.
+            // 3. Apply refund and return quantities to the specific sale record FIRST
+            // This ensures that when we recalculate total debt next, it sees the updated refund_amount.
             if (!empty($data['sale_id'])) {
                 $weight = (float)($data['weight_kg'] ?? 0);
                 $units = (int)($data['quantity_units'] ?? 0);
                 $this->saleRepo->updateRefundAmountAndQuantity($data['sale_id'], $amount, $weight, $units);
+            }
+
+            // 4. Financial Adjustments (Recalculate customer total)
+            if ($refundType === 'Debt') {
+                $customerId = $data['customer_id'];
+                // Now decrementDebt will correctly sum up (price - paid - refund_amount) 
+                // because we just updated refund_amount above.
+                $this->customerRepo->decrementDebt($customerId, $amount);
             }
 
             // 4. Inventory Adjustments
