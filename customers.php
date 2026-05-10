@@ -101,19 +101,24 @@ $customers = $customerService->listCustomers();
                         <input type="text" class="form-control" name="name" required>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">الجوال <span class="text-danger">*</span></label>
+                        <label class="form-label">الجوال</label>
                         <div class="input-group">
-                            <input type="tel" class="form-control text-end" name="phone" id="c_phone" required pattern="[0-9]{7,15}" inputmode="numeric" placeholder="7xxxxxxxxx">
+                            <input type="tel" class="form-control text-end" name="phone" id="c_phone" inputmode="numeric" placeholder="7xxxxxxxxx">
                             <button type="button" class="btn btn-warning" onclick="pickContact('c_phone')">
                                 <i class="fas fa-address-book"></i>
                             </button>
                         </div>
-                        <div class="form-text">أدخل أرقاماً فقط</div>
+                        <div class="form-text">أدخل أرقاماً فقط (اختياري)</div>
                     </div>
                     <div class="mb-3">
                         <label class="form-label text-danger fw-bold">سقف الدين (اتركه فارغاً لعدم وجود سقف)</label>
                         <input type="number" class="form-control" name="debt_limit" placeholder="بدون سقف">
                         <div class="form-text">الحد الأقصى للديون المسموح بها لهذا العميل. اتركه فارغاً لغير محدود.</div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-primary fw-bold">الرصيد الافتتاحي (دين مسبق)</label>
+                        <input type="number" class="form-control" name="opening_balance" placeholder="0" value="0">
+                        <div class="form-text text-primary">إذا كان العميل عليه دين مسبق.</div>
                     </div>
                 </div>
                 <div class="modal-footer">

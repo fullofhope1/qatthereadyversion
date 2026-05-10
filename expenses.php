@@ -14,13 +14,13 @@ $user_role = $_SESSION['role'];
 $staff = $staffRepo->getWithCurrentWithdrawals($user_id, $user_role);
 $jsonStaff = json_encode($staff);
 
-$today = date('Y-m-d');
+$today = getOperationalDate();
 
 // Providers list for the new category (Fetching all to ensure visibility)
 $providers = $providerRepo->getAll();
 
 // Expenses
-$expenses = $expenseRepo->getTodayExpenses($today, $user_id, $user_role);
+$expenses = $expenseRepo->getTodayExpenses($today, $user_id);
 
 // Deposits
 $deposits = $depositRepo->getTodayDeposits($today, $user_id);

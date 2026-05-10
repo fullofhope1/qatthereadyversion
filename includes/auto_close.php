@@ -7,11 +7,11 @@ require_once __DIR__ . '/Autoloader.php';
  */
 function trigger_auto_closing($pdo, $targetDate = null, $force = false)
 {
-    $limitDate = $targetDate ?: date('Y-m-d', strtotime('-1 day'));
+    $limitDate = $targetDate ?: date('Y-m-d', strtotime(getOperationalDate() . ' -1 day'));
 
     // Always find the oldest date that has unclosed activity (up to $limitDate)
     $stmt = $pdo->prepare("SELECT MIN(d) FROM (
-        SELECT MIN(COALESCE(purchase_date, DATE(created_at))) as d FROM purchases WHERE status IN ('Fresh', 'Momsi') AND (purchase_date <= ? OR (purchase_date IS NULL AND DATE(created_at) <= ?))
+        SELECT MIN(COALESCE(purchase_date, DATE(created_at))) as d FROM purchases WHERE (status IN ('Fresh', 'Momsi') OR status IS NULL OR status = '') AND is_received = 1 AND (purchase_date <= ? OR (purchase_date IS NULL AND DATE(created_at) <= ?))
         UNION
         SELECT MIN(COALESCE(sale_date, DATE(created_at))) as d FROM sales WHERE payment_method = 'Debt' AND debt_type = 'Daily' AND is_paid = 0 AND (sale_date <= ? OR (sale_date IS NULL AND DATE(created_at) <= ?))
         UNION

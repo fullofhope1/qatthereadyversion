@@ -44,28 +44,37 @@ class DebtService extends BaseService
             // 1. Insert Payment Record
             $this->debtRepo->insertPayment($customerId, $amount, $note, $method, null, $transferData);
 
-            // 2. Distribute payment across sales (oldest first)
+            // 2. Distribute payment: First reduce Opening Balance, then oldest sales
             $remaining = $amount;
-            $unpaidSales = $this->debtRepo->getUnpaidSales($customerId);
+            
+            // A. Check Opening Balance
+            $cust = $this->debtRepo->getOpeningDebtInfo($customerId);
+            $currentOpeningDebt = (float)($cust['opening_balance'] ?? 0) - (float)($cust['paid_opening_balance'] ?? 0);
+            
+            if ($currentOpeningDebt > 0 && $remaining > 0) {
+                $payToOpening = min($remaining, $currentOpeningDebt);
+                $this->debtRepo->updateOpeningBalancePayment($customerId, $payToOpening);
+                $remaining -= $payToOpening;
+            }
 
-            foreach ($unpaidSales as $sale) {
-                if ($remaining <= 0) {
-                    break;
-                }
+            // B. Distribute remaining to sales
+            if ($remaining > 0) {
+                $unpaidSales = $this->debtRepo->getUnpaidSales($customerId);
+                foreach ($unpaidSales as $sale) {
+                    if ($remaining <= 0) break;
 
-                $netPrice = $sale['price'] - $sale['refund_amount'];
-                $needed = $netPrice - $sale['paid_amount'];
+                    $netPrice = $sale['price'] - $sale['refund_amount'];
+                    $needed = $netPrice - $sale['paid_amount'];
 
-                if ($needed <= 0) {
-                    continue;
-                }
+                    if ($needed <= 0) continue;
 
-                if ($remaining >= $needed) {
-                    $this->debtRepo->updateSalePayment($sale['id'], $netPrice, true);
-                    $remaining -= $needed;
-                } else {
-                    $this->debtRepo->updateSalePayment($sale['id'], $sale['paid_amount'] + $remaining, false);
-                    $remaining = 0;
+                    if ($remaining >= $needed) {
+                        $this->debtRepo->updateSalePayment($sale['id'], $netPrice, true);
+                        $remaining -= $needed;
+                    } else {
+                        $this->debtRepo->updateSalePayment($sale['id'], $sale['paid_amount'] + $remaining, false);
+                        $remaining = 0;
+                    }
                 }
             }
 

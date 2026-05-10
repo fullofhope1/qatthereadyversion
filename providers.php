@@ -102,8 +102,8 @@ $providers = $providerService->listProviders($_SESSION['user_id']);
                         <input type="text" id="new_name" class="form-control rounded-3" required>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label small fw-bold text-secondary">الهاتف <span class="text-danger">*</span></label>
-                        <input type="tel" id="new_phone" class="form-control rounded-3" required inputmode="numeric" placeholder="7xxxxxxxxx">
+                        <label class="form-label small fw-bold text-secondary">الهاتف</label>
+                        <input type="tel" id="new_phone" class="form-control rounded-3" inputmode="numeric" placeholder="7xxxxxxxxx">
                     </div>
                 </div>
                 <div class="modal-footer border-top-0 p-4 pt-0">
@@ -131,8 +131,8 @@ $providers = $providerService->listProviders($_SESSION['user_id']);
                         <input type="text" id="edit_name" class="form-control rounded-3" required>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label small fw-bold text-secondary">الهاتف <span class="text-danger">*</span></label>
-                        <input type="tel" id="edit_phone" class="form-control rounded-3" required inputmode="numeric">
+                        <label class="form-label small fw-bold text-secondary">الهاتف</label>
+                        <input type="tel" id="edit_phone" class="form-control rounded-3" inputmode="numeric">
                     </div>
                 </div>
                 <div class="modal-footer border-top-0 p-4 pt-0">
@@ -160,7 +160,7 @@ $providers = $providerService->listProviders($_SESSION['user_id']);
         const name = document.getElementById('new_name').value.trim();
         const phone = document.getElementById('new_phone').value.trim();
 
-        if (!name || !phone) return alert('جميع الحقول مطلوبة');
+        if (!name) return alert('الاسم مطلوب');
 
         const formData = new FormData();
         formData.append('name', name);

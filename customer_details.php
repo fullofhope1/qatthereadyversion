@@ -52,6 +52,11 @@ elseif (str_contains($back, '.php')) $backUrl = $back;
             <div class="card-body text-center">
                 <h3><?= htmlspecialchars($customer['name']) ?></h3>
                 <p class="text-muted"><?= htmlspecialchars($customer['phone']) ?></p>
+                <?php if ($customer['opening_balance'] > 0): ?>
+                    <div class="mb-2">
+                        <span class="badge bg-secondary">رصيد افتتاحي: <?= number_format($customer['opening_balance']) ?></span>
+                    </div>
+                <?php endif; ?>
                 <hr>
                 <h5 class="text-muted"><?= $customer['total_debt'] < 0 ? 'رصيد دائن (له)' : 'الدين الحالي' ?></h5>
                 <h2 class="<?= $customer['total_debt'] < 0 ? 'text-success' : 'text-danger' ?> display-4">

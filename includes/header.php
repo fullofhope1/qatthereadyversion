@@ -9,7 +9,7 @@ if (session_status() === PHP_SESSION_NONE) {
 UrlHelper::resolveParams();
 
 // Handle Midnight Auto-Close logic
-$todayDate = date('Y-m-d');
+$todayDate = getOperationalDate();
 if (!isset($_SESSION['last_autoclose_check']) || $_SESSION['last_autoclose_check'] !== $todayDate) {
     try {
         require_once __DIR__ . '/auto_close.php';
@@ -50,14 +50,8 @@ if (isset($_SESSION['user_id']) && $_SESSION['role'] === 'user' && !in_array($cu
     }
 }
 
-// For Admins -> Allow access to all administrative pages
-if (isset($_SESSION['role']) && ($_SESSION['role'] === 'admin' || $_SESSION['role'] === 'super_admin')) {
-    // If they are logged in as admin/super_admin, they are generally allowed to access the system pages.
-    // We only block them if it's a completely invalid page (handled by 404/gateway).
-}
-
-// For Super Admins -> Restrict access based on sub_role
-if (isset($_SESSION['role']) && $_SESSION['role'] === 'super_admin' && !in_array($current_page, $public_pages)) {
+// Enforce Granular Permissions for all logged-in users
+if (isset($_SESSION['user_id']) && !in_array($current_page, $public_pages)) {
     requirePermission();
 }
 
@@ -71,12 +65,12 @@ if (isset($_SESSION['user_id'])) {
     if ($_SESSION['role'] !== 'user') {
         $home_link = 'dashboard.php';
 
-        // If super_admin and doesn't have dashboard permission, fall back
+        // If super_admin and doesn't have dashboard permission, get their functional home
         if ($_SESSION['role'] === 'super_admin') {
             $sub_role = $_SESSION['sub_role'] ?? 'full';
-            $no_dash = ['reports', 'sales_debts', 'seller', 'accountant', 'partner'];
+            $no_dash = ['reports', 'sales_debts', 'seller', 'accountant', 'partner', 'receiving', 'verifier'];
             if (in_array($sub_role, $no_dash)) {
-                $home_link = 'settings.php'; // Or just index.php
+                $home_link = getHomeLink(); // This returns purchases.php for receivers
             }
         }
     }
@@ -335,8 +329,8 @@ if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
                         $is_full = ($sub_role === 'full');
                         ?>
                         
-                        <?php if ($is_full || $sub_role === 'receiving' || $sub_role === 'verifier'): ?>
-                            <li class="nav-item"><a class="nav-link <?= navActive($home_link, $current_page) ?>" href="<?= $home_link ?>"><i class="fas fa-home me-1"></i> الرئيسية</a></li>
+                        <?php if ($is_full): ?>
+                            <li class="nav-item"><a class="nav-link <?= navActive('dashboard.php', $current_page) ?>" href="dashboard.php"><i class="fas fa-home me-1"></i> الرئيسية</a></li>
                         <?php endif; ?>
 
                         <?php if ($is_full || $sub_role === 'sales_debts' || $sub_role === 'seller'): ?>

@@ -28,17 +28,16 @@ class ExpenseRepository extends BaseRepository
     }
 
 
-    public function getTodayExpenses($date, $userId, $role = 'super_admin')
+    public function getTodayExpenses($date, $userId)
     {
-        // Team isolation: Filter by the role of the creator to group Super Admin with their sub-roles
+        // Strict isolation: Filter by the individual user ID (created_by)
         $sql = "SELECT e.*, s.name as staff_name, p.name as provider_name
                 FROM expenses e 
                 LEFT JOIN staff s ON e.staff_id = s.id 
                 LEFT JOIN providers p ON e.provider_id = p.id
-                JOIN users u ON e.created_by = u.id
-                WHERE e.expense_date = ? AND u.role = ? 
+                WHERE e.expense_date = ? AND e.created_by = ? 
                 ORDER BY e.id DESC";
-        return $this->fetchAll($sql, [$date, $role]);
+        return $this->fetchAll($sql, [$date, $userId]);
     }
 
     public function getTotalStaffWithdrawals($staffId)

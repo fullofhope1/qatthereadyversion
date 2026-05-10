@@ -1,11 +1,6 @@
 </div> <!-- End Container -->
 
-<!-- Floating Help Button -->
-<?php if (isset($_SESSION['user_id'])): ?>
-<a href="javascript:void(0)" id="help_trigger" onclick="if(typeof startSiteTour === 'function') startSiteTour(); else alert('جاري تحميل نظام المساعدة... يرجى المحاولة بعد قليل');" title="دليل الاستخدام">
-    <i class="fas fa-question"></i>
-</a>
-<?php endif; ?>
+
 
 <!-- Floating AI Chatbot Button (Super Admin Only) -->
 <?php if (isset($_SESSION['role']) && $_SESSION['role'] === 'super_admin'): 
@@ -195,10 +190,78 @@
         input.focus();
         history.scrollTop = history.scrollHeight;
     }
+    // Draggable AI Assistant Logic
+    const aiBtn = document.getElementById('ai_trigger');
+    const aiChat = document.getElementById('ai_chat_container');
+    
+    if (aiBtn) {
+        let isDragging = false;
+        let startX, startY, initialX, initialY;
+
+        aiBtn.addEventListener('mousedown', startDragging);
+        aiBtn.addEventListener('touchstart', startDragging, { passive: false });
+
+        function startDragging(e) {
+            if (e.type === 'touchstart') {
+                startX = e.touches[0].clientX;
+                startY = e.touches[0].clientY;
+            } else {
+                startX = e.clientX;
+                startY = e.clientY;
+            }
+            initialX = aiBtn.offsetLeft;
+            initialY = aiBtn.offsetTop;
+            isDragging = true;
+            aiBtn.style.transition = 'none';
+
+            document.addEventListener('mousemove', drag);
+            document.addEventListener('touchmove', drag, { passive: false });
+            document.addEventListener('mouseup', stopDragging);
+            document.addEventListener('touchend', stopDragging);
+        }
+
+        function drag(e) {
+            if (!isDragging) return;
+            if (e.type === 'touchmove') e.preventDefault();
+
+            let clientX = (e.type === 'touchmove') ? e.touches[0].clientX : e.clientX;
+            let clientY = (e.type === 'touchmove') ? e.touches[0].clientY : e.clientY;
+
+            let dx = clientX - startX;
+            let dy = clientY - startY;
+
+            let newX = initialX + dx;
+            let newY = initialY + dy;
+
+            // Boundaries
+            newX = Math.max(0, Math.min(newX, window.innerWidth - aiBtn.offsetWidth));
+            newY = Math.max(0, Math.min(newY, window.innerHeight - aiBtn.offsetHeight));
+
+            aiBtn.style.left = newX + 'px';
+            aiBtn.style.top = newY + 'px';
+            aiBtn.style.bottom = 'auto';
+            
+            // Sync chat box position
+            if (aiChat) {
+                aiChat.style.left = newX + 'px';
+                aiChat.style.top = (newY - aiChat.offsetHeight - 10) + 'px';
+                aiChat.style.bottom = 'auto';
+            }
+        }
+
+        function stopDragging() {
+            isDragging = false;
+            aiBtn.style.transition = 'all 0.3s ease';
+            document.removeEventListener('mousemove', drag);
+            document.removeEventListener('touchmove', drag);
+        }
+    }
 </script>
 <?php endif; ?>
-
-<!-- Libraries -->
+<style>
+    /* Prevent help icon from reappearing if called elsewhere */
+    #help_trigger { display: none !important; }
+</style>
 <script src="https://cdn.jsdelivr.net/npm/driver.js@0.9.8/dist/driver.min.js"></script>
 
 <!-- Global Site Data for Tour -->

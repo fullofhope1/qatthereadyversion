@@ -25,10 +25,10 @@ class CustomerRepository extends BaseRepository
         return $this->fetchOne("SELECT id FROM customers WHERE phone = ? AND is_deleted = 0", [$phone]);
     }
 
-    public function create($name, $phone, $debtLimit = null)
+    public function create($name, $phone = null, $debtLimit = null, $openingBalance = 0)
     {
-        $sql = "INSERT INTO customers (name, phone, debt_limit) VALUES (?, ?, ?)";
-        $this->execute($sql, [$name, $phone, $debtLimit]);
+        $sql = "INSERT INTO customers (name, phone, debt_limit, opening_balance, total_debt) VALUES (?, ?, ?, ?, ?)";
+        $this->execute($sql, [$name, $phone ?: null, $debtLimit, $openingBalance, $openingBalance]);
         return $this->pdo->lastInsertId();
     }
 
@@ -47,7 +47,7 @@ class CustomerRepository extends BaseRepository
     {
         // ✅ FIX #4: Recalculate from sales table to keep total_debt accurate
         return $this->execute(
-            "UPDATE customers SET total_debt = (
+            "UPDATE customers SET total_debt = (COALESCE(opening_balance, 0) - COALESCE(paid_opening_balance, 0)) + (
                 SELECT COALESCE(SUM(price - paid_amount - COALESCE(refund_amount,0)), 0)
                 FROM sales WHERE customer_id = ? AND is_paid = 0 AND is_returned = 0
             ) WHERE id = ?",
@@ -59,7 +59,7 @@ class CustomerRepository extends BaseRepository
     {
         // ✅ FIX #4: Recalculate from sales table to keep total_debt accurate
         return $this->execute(
-            "UPDATE customers SET total_debt = (
+            "UPDATE customers SET total_debt = (COALESCE(opening_balance, 0) - COALESCE(paid_opening_balance, 0)) + (
                 SELECT COALESCE(SUM(price - paid_amount - COALESCE(refund_amount,0)), 0)
                 FROM sales WHERE customer_id = ? AND is_paid = 0 AND is_returned = 0
             ) WHERE id = ?",

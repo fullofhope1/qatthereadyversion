@@ -51,6 +51,12 @@ abstract class BaseRepository
         return true;
     }
 
+    public function inTransaction()
+    {
+        $id = $this->getPdoId();
+        return (isset(self::$transactionCounters[$id]) && self::$transactionCounters[$id] > 0);
+    }
+
     public function rollBack()
     {
         $id = $this->getPdoId();

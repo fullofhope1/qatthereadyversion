@@ -19,6 +19,20 @@ if ($is_localhost) {
 
 date_default_timezone_set('Asia/Aden');
 
+if (!function_exists('getOperationalDate')) {
+    /**
+     * Returns the operational business date.
+     * If the current time is before 6:00 AM, it returns YESTERDAY'S date.
+     */
+    function getOperationalDate() {
+        $currentTime = date('H:i');
+        if ($currentTime < '06:20') {
+            return date('Y-m-d', strtotime('-1 day'));
+        }
+        return date('Y-m-d');
+    }
+}
+
 try {
     $pdo = new PDO("mysql:host=$servername;dbname=$dbname;charset=utf8", $username, $password);
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);

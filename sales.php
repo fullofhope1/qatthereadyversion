@@ -9,7 +9,7 @@ $customerRepo = new CustomerRepository($pdo);
 $customers = $customerRepo->getAllActive();
 
 // Fetch Today's Stock via Clean Architecture
-$today = date('Y-m-d');
+$today = getOperationalDate();
 $purchaseRepo = new PurchaseRepository($pdo);
 $saleRepo = new SaleRepository($pdo);
 $leftoverRepo = new LeftoverRepository($pdo);
@@ -37,7 +37,7 @@ if (isset($_GET['success']) && isset($_GET['sale_id'])) {
         $acc = $notifData['accounts'];
         
         // Template
-        $todayAr = date('Y-m-d'); 
+        $todayAr = getOperationalDate(); 
         $saleAmount = number_format($saleReceipt['price']);
         $totalDebt = number_format($saleReceipt['cust_total_debt']);
         $weightOrUnits = ($saleReceipt['unit_type'] === 'weight') ? ($saleReceipt['weight_grams'] . ' جرام') : ($saleReceipt['quantity_units'] . ' ' . $saleReceipt['unit_type']);
@@ -175,9 +175,12 @@ if (isset($_GET['success']) && isset($_GET['sale_id'])) {
             </div>
 
             <!-- Cancel Button (Below Summary) -->
-            <div class="text-start mb-3">
+            <div class="text-start mb-3 d-flex gap-2">
                 <button type="button" class="btn btn-danger btn-sm rounded-pill px-3" onclick="location.reload()">
                     إلغاء العملية / جديد (X)
+                </button>
+                <button type="button" class="btn btn-dark btn-sm rounded-pill px-3" onclick="startStaffConsumption()">
+                    <i class="fas fa-utensils me-1"></i> تسجيل تخزينة عمال
                 </button>
             </div>
         </div>
@@ -185,7 +188,7 @@ if (isset($_GET['success']) && isset($_GET['sale_id'])) {
 
     <!-- MAIN FORM -->
     <form action="requests/process_sale.php" method="POST" id="saleForm">
-        <input type="hidden" name="sale_date" value="<?= date('Y-m-d') ?>">
+        <input type="hidden" name="sale_date" value="<?= getOperationalDate() ?>">
         <input type="hidden" name="qat_type_id" id="i_type">
         <input type="hidden" name="purchase_id" id="i_pid">
         <input type="hidden" name="leftover_id" id="i_leftover">
@@ -210,6 +213,17 @@ if (isset($_GET['success']) && isset($_GET['sale_id'])) {
             <!-- STRICTLY ARABIC BUTTONS from DB (updated by script) -->
             <div class="grid-container">
                 <?php foreach ($types as $t): ?>
+                    <?php 
+                        // Check if this type has any stock in $todaysStock
+                        $hasStock = false;
+                        foreach ($todaysStock as $item) {
+                            if ($item['qat_type_id'] == $t['id'] && $item['type'] !== 'leftover') {
+                                if (isset($item['remaining_kg']) && $item['remaining_kg'] > 0) { $hasStock = true; break; }
+                                if (isset($item['remaining_units']) && $item['remaining_units'] > 0) { $hasStock = true; break; }
+                            }
+                        }
+                        if (!$hasStock) continue;
+                    ?>
                     <button type="button" class="circle-btn btn-type" onclick="nextStep(1, {id: <?= $t['id'] ?>, name: '<?= $t['name'] ?>'})">
                         <?= $t['name'] ?>
                     </button>
@@ -402,6 +416,13 @@ if (isset($_GET['success']) && isset($_GET['sale_id'])) {
     const allCustomers = <?= $jsonCustomers ?>;
     const stockData = <?= $jsonStock ?>;
     let currentStep = 1;
+    let isStaffConsumption = false;
+
+    function startStaffConsumption() {
+        isStaffConsumption = true;
+        alert('نمط تسجيل تخزينة العمال مفعل. اختر النوع والوزن وسيتم الحفظ تلقائياً كفاقد.');
+        goTo(1);
+    }
 
     function nextStep(step, data) {
         // Handle Data Logic
@@ -467,11 +488,19 @@ if (isset($_GET['success']) && isset($_GET['sale_id'])) {
         } else if (step === 4) { // Weight (Finalizing Weight)
             document.getElementById('i_weight').value = data;
             document.getElementById('s_weight').innerText = data + 'g';
+            if (isStaffConsumption) {
+                finishStaffConsumption(data);
+                return;
+            }
             goTo(5);
             return;
         } else if (step === 4.5) { // Units (Finalizing Units)
             document.getElementById('i_units').value = data;
             document.getElementById('s_weight').innerText = data + ' (' + document.getElementById('i_utype').value + ')';
+            if (isStaffConsumption) {
+                finishStaffConsumption(data);
+                return;
+            }
             goTo(5);
             return;
         } else if (step === 5) { // Price
@@ -549,6 +578,31 @@ if (isset($_GET['success']) && isset($_GET['sale_id'])) {
         }
 
         document.getElementById('saleForm').submit();
+    }
+
+    function finishStaffConsumption(amount) {
+        if (!confirm(`هل تريد تأكيد تسجيل ${amount} ${document.getElementById('i_utype').value === 'weight' ? 'جرام' : document.getElementById('i_utype').value} كتخزينة عمال؟`)) return;
+        
+        const formData = new FormData();
+        formData.append('purchase_id', document.getElementById('i_pid').value);
+        formData.append('amount', document.getElementById('i_utype').value === 'weight' ? (amount / 1000) : amount);
+        formData.append('unit_type', document.getElementById('i_utype').value);
+        formData.append('reason', 'Staff_Consumption');
+        formData.append('notes', 'تخزينة عمال من واجهة المبيعات');
+
+        fetch('requests/manual_waste.php', {
+            method: 'POST',
+            body: formData
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                alert('تم تسجيل التخزينة بنجاح');
+                location.reload();
+            } else {
+                alert('خطأ: ' + data.error);
+            }
+        });
     }
 
     function goTo(step) {
@@ -929,8 +983,7 @@ if (isset($_GET['success']) && isset($_GET['sale_id'])) {
         const phone = document.getElementById('new_phone').value.trim();
 
         if (!name) return alert("الاسم مطلوب");
-        if (!phone) return alert("رقم الهاتف مطلوب");
-        if (!/^\d{7,15}$/.test(phone)) return alert("رقم الهاتف غير صحيح - يجب أن يكون أرقاماً فقط (7-15 رقم)");
+        if (phone && !/^\d{7,15}$/.test(phone)) return alert("رقم الهاتف غير صحيح - يجب أن يكون أرقاماً فقط (7-15 رقم)");
 
         const formData = new FormData();
         formData.append('name', name);

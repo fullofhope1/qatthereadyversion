@@ -1,5 +1,5 @@
 <?php
-require 'config/db.php';
+require_once 'config/db.php';
 include 'includes/header.php';
 
 // Initialization via Clean Architecture

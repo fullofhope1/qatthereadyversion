@@ -297,14 +297,14 @@ if (!empty($freshProducts)) {
                     </div>
 
                     <div class="position-relative z-1 text-start mt-auto d-flex flex-column gap-2">
-                        <div class="d-flex justify-content-between align-items-center bg-white bg-opacity-10 p-2 px-3 rounded border border-light border-opacity-25">
+                        <a href="tel:+967775065459" class="d-flex justify-content-between align-items-center bg-white bg-opacity-10 p-2 px-3 rounded border border-light border-opacity-25 text-white text-decoration-none transition-hover">
                             <span class="fw-bold"><i class="fas fa-phone-alt me-2 opacity-75"></i> إتصال</span>
                             <span class="fw-bold fs-5" dir="ltr" style="letter-spacing: 1px;">+967 775065459</span>
-                        </div>
-                        <div class="d-flex justify-content-between align-items-center bg-white bg-opacity-10 p-2 px-3 rounded border border-light border-opacity-25">
+                        </a>
+                        <a href="https://wa.me/967774456261" target="_blank" class="d-flex justify-content-between align-items-center bg-white bg-opacity-10 p-2 px-3 rounded border border-light border-opacity-25 text-white text-decoration-none transition-hover">
                             <span class="fw-bold"><i class="fab fa-whatsapp me-2 opacity-75"></i> واتساب</span>
                             <span class="fw-bold fs-5" dir="ltr" style="letter-spacing: 1px;">+967 774456261</span>
-                        </div>
+                        </a>
                     </div>
                 </div>
             </div>
@@ -322,7 +322,7 @@ if (!empty($freshProducts)) {
                     </div>
 
                     <div class="position-relative z-1 text-center mt-auto mb-3">
-                        <div class="fw-bold mb-3" style="font-size: 1.5rem; text-shadow: 0 2px 4px rgba(0,0,0,0.1);">إب - شارع الدائري</div>
+                        <div class="fw-bold mb-3" style="font-size: 1.5rem; text-shadow: 0 2px 4px rgba(0,0,0,0.1);">إب - شارع الدائري سوق السلام</div>
                     </div>
                 </div>
             </div>
@@ -370,21 +370,13 @@ if (!empty($freshProducts)) {
         <div class="text-center animate__animated animate__fadeInUp" style="animation-delay: 0.5s;">
             <p class="fw-bold text-muted mb-4 fs-5"><i class="fas fa-globe me-2 text-secondary"></i> لا تفوّت جديدنا، تابعنا على الشبكات الاجتماعية:</p>
             <div class="d-flex justify-content-center flex-wrap gap-4 pb-3">
-                <a href="#" class="social-btn facebook">
+                <a href="https://facebook.com/yourpage" target="_blank" class="social-btn facebook">
                     <i class="fab fa-facebook-f"></i>
-                    <span>القادري لأجود أنواع القات</span>
+                    <span>فيسبوك</span>
                 </a>
-                <a href="#" class="social-btn snapchat">
-                    <i class="fab fa-snapchat-ghost"></i>
-                    <span>alqadri_2025</span>
-                </a>
-                <a href="#" class="social-btn instagram">
+                <a href="https://instagram.com/yourpage" target="_blank" class="social-btn instagram">
                     <i class="fab fa-instagram"></i>
-                    <span>alqadri_2025</span>
-                </a>
-                <a href="#" class="social-btn youtube">
-                    <i class="fab fa-youtube"></i>
-                    <span>alqadri 2025</span>
+                    <span>إنستغرام</span>
                 </a>
             </div>
         </div>

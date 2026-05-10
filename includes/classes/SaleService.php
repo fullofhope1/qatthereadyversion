@@ -87,7 +87,7 @@ class SaleService extends BaseService
 
     public function getAvailableLeftoverStock()
     {
-        return array_values(array_filter($this->getTodaysStock(date('Y-m-d')), function($item) {
+        return array_values(array_filter($this->getTodaysStock(getOperationalDate()), function($item) {
             return $item['type'] === 'leftover';
         }));
     }

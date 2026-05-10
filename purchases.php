@@ -13,7 +13,7 @@ $purchaseService = new PurchaseService($purchaseRepo, $productRepo);
 
 $pending_shipments = $purchaseService->getPending();
 
-$today = date('Y-m-d');
+$today = getOperationalDate();
 $received_purchases = $purchaseService->getReceivedToday($today);
 ?>
 
@@ -98,7 +98,9 @@ $received_purchases = $purchaseService->getReceivedToday($today);
                                 <th>المرسل</th>
                                 <th>المستلم</th>
                                 <th>الفرق</th>
+                                <th>المتبقي</th>
                                 <th>الحالة</th>
+                                <th>إجراء</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -132,8 +134,19 @@ $received_purchases = $purchaseService->getReceivedToday($today);
                                     <td class="<?= $diff_class ?>">
                                         <?= $diff_display ?>
                                     </td>
+                                    <td class="text-primary fw-bold">
+                                        <?php 
+                                            $rem = $purchaseRepo->getRemainingStock($p['id']);
+                                            echo ($p['unit_type'] === 'weight') ? number_format($rem['kg'], 3) . ' كجم' : number_format($rem['units']) . ' وحدة';
+                                        ?>
+                                    </td>
                                     <td>
                                         <span class="badge bg-success">تم التخزين</span>
+                                    </td>
+                                    <td>
+                                        <button class="btn btn-outline-danger btn-sm" onclick="openWasteModal(<?= $p['id'] ?>, '<?= addslashes($p['type_name']) ?>', '<?= $p['unit_type'] ?>', <?= ($p['unit_type'] === 'weight' ? $rem['kg'] : $rem['units']) ?>)">
+                                            <i class="fas fa-trash-alt"></i> إتلاف
+                                        </button>
                                     </td>
                                 </tr>
                             <?php endforeach; ?>
@@ -298,6 +311,91 @@ $received_purchases = $purchaseService->getReceivedToday($today);
                 diffDisplay.className = 'alert text-center fw-bold alert-secondary';
             }
         }
+    }
+</script>
+
+<!-- Manual Waste Modal -->
+<div class="modal fade" id="wasteModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title"><i class="fas fa-trash-alt me-2"></i> تسجيل إتلاف / فاقد</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-info py-2" id="wasteInfo"></div>
+                <form id="wasteForm">
+                    <input type="hidden" id="w_pid" name="purchase_id">
+                    <input type="hidden" id="w_utype" name="unit_type">
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">الكمية المراد إتلافها</label>
+                        <div class="input-group input-group-lg">
+                            <input type="number" step="0.001" class="form-control text-center" id="w_amount" name="amount" required>
+                            <span class="input-group-text" id="w_unit_label"></span>
+                        </div>
+                        <div class="form-text text-danger" id="w_max_error"></div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">السبب</label>
+                        <select class="form-select" name="reason" id="w_reason">
+                            <option value="Dropped">بضاعة تالفة / خربت</option>
+                            <option value="Staff_Consumption">تخزينة عمال (مجاني)</option>
+                            <option value="Other">سبب آخر</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">ملاحظات إضافية</label>
+                        <textarea class="form-control" name="notes" rows="2" placeholder="اختياري..."></textarea>
+                    </div>
+
+                    <button type="button" class="btn btn-danger w-100 py-3 fw-bold shadow-sm" onclick="submitWaste()">
+                        <i class="fas fa-check-circle me-1"></i> تأكيد الإتلاف
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const wasteModal = new bootstrap.Modal(document.getElementById('wasteModal'));
+    let maxAvailable = 0;
+
+    function openWasteModal(pid, name, unitType, available) {
+        document.getElementById('w_pid').value = pid;
+        document.getElementById('w_utype').value = unitType;
+        document.getElementById('wasteInfo').innerHTML = `إتلاف من شحنة: <b>${name}</b><br>المتوفر حالياً: <b>${available} ${unitType === 'weight' ? 'كجم' : 'وحدة'}</b>`;
+        document.getElementById('w_unit_label').textContent = unitType === 'weight' ? 'كجم' : 'وحدة';
+        document.getElementById('w_amount').value = '';
+        document.getElementById('w_max_error').textContent = '';
+        maxAvailable = available;
+        wasteModal.show();
+    }
+
+    function submitWaste() {
+        const amount = parseFloat(document.getElementById('w_amount').value) || 0;
+        if (amount <= 0) return alert('يرجى إدخال كمية صحيحة');
+        if (amount > maxAvailable) {
+            document.getElementById('w_max_error').textContent = 'الكمية المدخلة أكبر من المتوفر!';
+            return;
+        }
+
+        const formData = new FormData(document.getElementById('wasteForm'));
+        fetch('requests/manual_waste.php', {
+            method: 'POST',
+            body: formData
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('خطأ: ' + data.error);
+            }
+        });
     }
 </script>
 

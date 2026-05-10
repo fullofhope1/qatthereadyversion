@@ -61,7 +61,7 @@ $jsonCustomers = json_encode($customers);
     </div>
 
     <form action="requests/process_sale.php" method="POST" id="saleForm">
-        <input type="hidden" name="sale_date" value="<?= date('Y-m-d') ?>">
+        <input type="hidden" name="sale_date" value="<?= getOperationalDate() ?>">
         <input type="hidden" name="qat_type_id" id="i_type">
         <input type="hidden" name="purchase_id" id="i_pid">
         <input type="hidden" name="leftover_id" id="i_lid">
@@ -80,6 +80,17 @@ $jsonCustomers = json_encode($customers);
             <h3>اختر النوع</h3>
             <div class="grid-container">
                 <?php foreach ($types as $t): ?>
+                    <?php 
+                        // Only show types that exist in $leftoverStocks
+                        $hasStock = false;
+                        foreach ($leftoverStocks as $s) {
+                            if ($s['qat_type_id'] == $t['id']) {
+                                $hasStock = true;
+                                break;
+                            }
+                        }
+                        if (!$hasStock) continue;
+                    ?>
                     <button type="button" class="circle-btn btn-type" onclick="nextStep(1, {id: <?= $t['id'] ?>, name: '<?= addslashes($t['name']) ?>'})">
                         <?= $t['name'] ?>
                     </button>
@@ -335,7 +346,8 @@ $jsonCustomers = json_encode($customers);
     function saveNewCust() {
         const name = document.getElementById('new_name').value.trim();
         const phone = document.getElementById('new_phone').value.trim();
-        if (!name || !phone) return alert("الاسم والهاتف مطلوبين");
+        if (!name) return alert("الاسم مطلوب");
+        if (phone && !/^\d{7,15}$/.test(phone)) return alert("رقم الهاتف غير صحيح - يجب أن يكون أرقاماً فقط (7-15 رقم)");
         const formData = new FormData(); formData.append('name', name); formData.append('phone', phone);
         fetch('requests/add_customer_ajax.php', { method: 'POST', body: formData }).then(r => r.json()).then(data => {
             if (data.success) { allCustomers.push({ id: data.id, name: name, phone: phone }); nextStep(3, { id: data.id, name: name }); } else alert("خطأ: " + (data.error || "فشل الحفظ"));

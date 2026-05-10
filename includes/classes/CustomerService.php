@@ -20,22 +20,24 @@ class CustomerService extends BaseService
         return $this->repository->getById($id);
     }
 
-    public function addCustomer($name, $phone, $debtLimit = null)
+    public function addCustomer($name, $phone, $debtLimit = null, $openingBalance = 0)
     {
         $name = trim($name);
         $phone = trim($phone);
 
-        // Validation: Fields required
+        // Validation: Name required
         if (empty($name)) {
             throw new Exception("الاسم مطلوب (Name is required)");
         }
-        if (empty($phone)) {
-            throw new Exception("رقم الهاتف مطلوب (Phone is required)");
-        }
 
-        // Validation: Phone format (7xxxxxxxxx)
-        if (!preg_match('/^\d{7,15}$/', $phone)) {
-            throw new Exception("رقم الهاتف غير صحيح - يجب أن يكون أرقاماً فقط (Invalid phone format)");
+        // Optional phone validation
+        if (!empty($phone)) {
+            if (!preg_match('/^\d{7,15}$/', $phone)) {
+                throw new Exception("رقم الهاتف غير صحيح - يجب أن يكون أرقاماً فقط (Invalid phone format)");
+            }
+            if ($this->repository->getByPhone($phone)) {
+                throw new Exception("رقم الهاتف موجود مسبقاً (This phone number already exists)");
+            }
         }
 
         // Validation: Name must be unique
@@ -43,12 +45,7 @@ class CustomerService extends BaseService
             throw new Exception("الاسم موجود مسبقاً (This name already exists)");
         }
 
-        // Validation: Phone must be unique
-        if ($this->repository->getByPhone($phone)) {
-            throw new Exception("رقم الهاتف موجود مسبقاً (This phone number already exists)");
-        }
-
-        return $this->repository->create($name, $phone, $debtLimit);
+        return $this->repository->create($name, $phone, $debtLimit, $openingBalance);
     }
 
     public function updateCustomer($id, $name, $phone, $debtLimit)
@@ -65,13 +62,11 @@ class CustomerService extends BaseService
             }
         }
 
-        // Validation: Phone required
-        if (empty($phone)) {
-            throw new Exception("رقم الهاتف مطلوب (Phone is required)");
-        }
-
-        // Check phone uniqueness if changed
-        if ($existing['phone'] !== $phone) {
+        // Optional phone validation if provided or changed
+        if (!empty($phone) && $existing['phone'] !== $phone) {
+            if (!preg_match('/^\d{7,15}$/', $phone)) {
+                throw new Exception("رقم الهاتف غير صحيح - يجب أن يكون أرقاماً فقط (Invalid phone format)");
+            }
             if ($this->repository->getByPhone($phone)) {
                 throw new Exception("رقم الهاتف الجديد موجود مسبقاً (New phone number already exists)");
             }

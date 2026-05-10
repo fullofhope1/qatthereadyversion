@@ -86,7 +86,7 @@ class PurchaseService extends BaseService
                 'agreed_price' => $newAgreedPrice,
                 'is_received' => 1,
                 'received_at' => date('Y-m-d H:i:s'),
-                'purchase_date' => date('Y-m-d')
+                'purchase_date' => getOperationalDate()
             ]);
 
             // Record loss if weight-based and significant

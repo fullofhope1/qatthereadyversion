@@ -43,12 +43,32 @@ function checkPermission()
     $global_allowed = ['settings.php', 'logout.php', 'access_denied.php', 'index.php'];
     if (in_array($current_page, $global_allowed)) return true;
 
-    // If the user is an Admin or Super Admin, they have access to all system tabs
-    if (isset($_SESSION['role']) && ($_SESSION['role'] === 'admin' || $_SESSION['role'] === 'super_admin')) {
-        return true;
+    if (isset($_SESSION['role'])) {
+        // Normal Admin: Access to Admin-level pages
+        if ($_SESSION['role'] === 'admin') return true;
+
+        // Super Admin: Granular check
+        if ($_SESSION['role'] === 'super_admin') {
+            $sub_role = $_SESSION['sub_role'] ?? 'full';
+            if ($sub_role === 'full') return true;
+
+            // Forbidden map
+            $forbidden = [
+                'receiving' => ['dashboard.php', 'reports.php', 'debts.php', 'refunds.php', 'closing.php'],
+                'verifier'  => ['dashboard.php', 'reports.php', 'debts.php', 'refunds.php', 'closing.php'],
+                'seller'    => ['closing.php', 'reports.php'],
+                'accountant' => ['dashboard.php', 'closing.php'],
+                'partner'   => ['dashboard.php', 'closing.php', 'sales.php', 'customers.php']
+            ];
+
+            if (isset($forbidden[$sub_role]) && in_array($current_page, $forbidden[$sub_role])) {
+                return false;
+            }
+            return true;
+        }
     }
 
-    return false; // Default for normal users trying to access admin pages
+    return false; // Default
 }
 
 function requirePermission()
@@ -63,13 +83,13 @@ function getHomeLink()
 {
     if (!isset($_SESSION['user_id'])) return 'index.php';
     if ($_SESSION['role'] === 'user') return 'index.php';
-    if ($_SESSION['role'] === 'admin') return 'sourcing.php'; // Primary for admin
+    if ($_SESSION['role'] === 'admin') return 'sourcing.php'; 
 
     $sub_role = $_SESSION['sub_role'] ?? 'full';
     $permissions = [
         'full' => 'dashboard.php',
-        'receiving' => 'dashboard.php',
-        'verifier' => 'dashboard.php',
+        'receiving' => 'purchases.php',
+        'verifier' => 'purchases.php',
         'reports' => 'reports.php',
         'sales_debts' => 'sales.php',
         'seller' => 'sales.php',

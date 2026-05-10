@@ -75,9 +75,9 @@ class DebtRepository extends BaseRepository
         // 1. Reset all customer debts to 0
         $this->execute("UPDATE customers SET total_debt = 0");
 
-        // 2. Recalculate based on unpaid sales
+        // 2. Recalculate based on unpaid sales + opening balance
         $sql = "UPDATE customers c 
-                SET c.total_debt = (
+                SET c.total_debt = (COALESCE(c.opening_balance, 0) - COALESCE(c.paid_opening_balance, 0)) + (
                     SELECT COALESCE(SUM(s.price - s.paid_amount - COALESCE(s.refund_amount, 0)), 0)
                     FROM sales s 
                     WHERE s.customer_id = c.id AND s.is_paid = 0
@@ -124,11 +124,21 @@ class DebtRepository extends BaseRepository
     {
         // ✅ FIX #3: Recalculate total_debt from actual sales data instead of just decrementing.
         // This prevents the cache from drifting over time due to partial payments, refunds, etc.
-        $sql = "UPDATE customers SET total_debt = (
+        $sql = "UPDATE customers SET total_debt = (COALESCE(opening_balance, 0) - COALESCE(paid_opening_balance, 0)) + (
                     SELECT COALESCE(SUM(price - paid_amount - COALESCE(refund_amount, 0)), 0)
                     FROM sales
                     WHERE customer_id = ? AND is_paid = 0 AND is_returned = 0
                 ) WHERE id = ?";
         return $this->execute($sql, [$customerId, $customerId]);
+    }
+
+    public function getOpeningDebtInfo($customerId)
+    {
+        return $this->fetchOne("SELECT opening_balance, paid_opening_balance FROM customers WHERE id = ?", [$customerId]);
+    }
+
+    public function updateOpeningBalancePayment($customerId, $amount)
+    {
+        return $this->execute("UPDATE customers SET paid_opening_balance = paid_opening_balance + ? WHERE id = ?", [$amount, $customerId]);
     }
 }

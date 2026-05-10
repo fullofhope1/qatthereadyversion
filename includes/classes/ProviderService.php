@@ -20,19 +20,19 @@ class ProviderService extends BaseService
         if (empty($name)) {
             throw new Exception("اسم الراعي مطلوب (Provider name is required)");
         }
-        if (empty($phone)) {
-            throw new Exception("رقم الهاتف مطلوب للراعي (Phone number is required)");
-        }
-        if (!preg_match('/^\d{7,15}$/', $phone)) {
-            throw new Exception("رقم الهاتف يجب أن يحتوي على أرقام فقط (Phone must contain only digits)");
+        
+        // Optional phone validation
+        if (!empty($phone)) {
+            if (!preg_match('/^\d{7,15}$/', $phone)) {
+                throw new Exception("رقم الهاتف يجب أن يحتوي على أرقام فقط (Phone must contain only digits)");
+            }
+            if ($this->repository->getByPhone($phone)) {
+                throw new Exception("رقم الهاتف هذا موجود مسبقاً (This phone number already exists)");
+            }
         }
 
         if ($this->repository->getByName($name)) {
             throw new Exception("هذا الاسم موجود مسبقاً (This name already exists)");
-        }
-
-        if ($this->repository->getByPhone($phone)) {
-            throw new Exception("رقم الهاتف هذا موجود مسبقاً (This phone number already exists)");
         }
 
         return $this->repository->create($name, $phone, $userId);
@@ -49,8 +49,13 @@ class ProviderService extends BaseService
             throw new Exception("الاسم الجديد موجود مسبقاً (New name already exists)");
         }
 
-        if ($existing['phone'] !== $phone && $this->repository->getByPhone($phone)) {
-            throw new Exception("رقم الهاتف الجديد موجود مسبقاً (New phone number already exists)");
+        if (!empty($phone) && $existing['phone'] !== $phone) {
+            if (!preg_match('/^\d{7,15}$/', $phone)) {
+                throw new Exception("رقم الهاتف يجب أن يحتوي على أرقام فقط (Phone must contain only digits)");
+            }
+            if ($this->repository->getByPhone($phone)) {
+                throw new Exception("رقم الهاتف الجديد موجود مسبقاً (New phone number already exists)");
+            }
         }
 
         return $this->repository->update($id, $name, $phone);

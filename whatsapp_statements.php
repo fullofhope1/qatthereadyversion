@@ -185,7 +185,7 @@ $todayAr = date('Y-m-d');
                                 <?php foreach ($customers as $c): ?>
                                     <?php
                                     $smsRaw = "إشعار من {$notifData['company_name']}: عليك مبلغ " . number_format($c['total_debt']) . " ريال. حساباتنا: جيب/جوالي " . $acc['jeeb'] . " كريمي " . $acc['kuraimi'];
-                                    $smsText = urlencode($smsRaw);
+                                    $smsText = rawurlencode($smsRaw);
                                     $smsPhone = $c['phone'];
                                     ?>
                                     <tr id="sms-row-<?= $c['id'] ?>">

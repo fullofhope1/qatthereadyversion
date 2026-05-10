@@ -108,16 +108,16 @@ class PurchaseRepository extends BaseRepository
                 FROM purchases p 
                 LEFT JOIN qat_types t ON p.qat_type_id = t.id 
                 LEFT JOIN providers prov ON p.provider_id = prov.id 
-                WHERE p.is_received = 1 AND DATE(p.received_at) = ? 
+                WHERE p.is_received = 1 AND p.purchase_date = ? 
                 ORDER BY p.received_at DESC";
         return $this->fetchAll($sql, [$date]);
     }
 
     public function getFreshStockByDate($date)
     {
-        $sql = "SELECT p.*, prov.name as provider_name 
+        $sql = "SELECT p.*, COALESCE(prov.name, 'بدون مورد') as provider_name 
                 FROM purchases p 
-                JOIN providers prov ON p.provider_id = prov.id 
+                LEFT JOIN providers prov ON p.provider_id = prov.id 
                 WHERE p.purchase_date = ? 
                 AND p.status IN ('Fresh', 'Momsi')
                 AND p.is_received = 1";
@@ -155,10 +155,24 @@ class PurchaseRepository extends BaseRepository
         return $this->execute($sql, [$amount, $id]);
     }
 
-    public function restoreInventory($id, $kg, $units)
+    public function getRemainingStock($purchaseId)
     {
-        // LOGIC REMOVED: We no longer modify the original purchase quantity.
-        // Inventory availability is now calculated dynamically in SaleRepository.
-        return true; 
+        $stmt = $this->pdo->prepare("SELECT 
+            p.unit_type, p.quantity_kg, p.received_units,
+            (SELECT COALESCE(SUM(COALESCE(weight_kg, weight_grams/1000) - COALESCE(returned_kg, 0)), 0) FROM sales WHERE purchase_id = ? AND is_returned = 0) as sold_kg,
+            (SELECT COALESCE(SUM(weight_kg), 0) FROM leftovers WHERE purchase_id = ? AND status IN ('Dropped', 'Auto_Dropped', 'Transferred_Next_Day', 'Auto_Momsi', 'Momsi_Day_1', 'Momsi_Day_2', 'Closed')) as managed_kg,
+            (SELECT COALESCE(SUM(quantity_units - COALESCE(returned_units, 0)), 0) FROM sales WHERE purchase_id = ? AND is_returned = 0) as sold_units,
+            (SELECT COALESCE(SUM(quantity_units), 0) FROM leftovers WHERE purchase_id = ? AND status IN ('Dropped', 'Auto_Dropped', 'Transferred_Next_Day', 'Auto_Momsi', 'Momsi_Day_1', 'Momsi_Day_2', 'Closed')) as managed_units
+            FROM purchases p WHERE p.id = ?");
+        $stmt->execute([$purchaseId, $purchaseId, $purchaseId, $purchaseId, $purchaseId]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$row) return ['kg' => 0, 'units' => 0];
+
+        return [
+            'unit_type' => $row['unit_type'],
+            'kg' => max(0, (float)$row['quantity_kg'] - (float)$row['sold_kg'] - (float)$row['managed_kg']),
+            'units' => max(0, (int)$row['received_units'] - (int)$row['sold_units'] - (int)$row['managed_units'])
+        ];
     }
 }

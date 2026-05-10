@@ -7,12 +7,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $name = trim($_POST['name']);
     $phone = trim($_POST['phone']);
     $debt_limit = (isset($_POST['debt_limit']) && $_POST['debt_limit'] !== '') ? $_POST['debt_limit'] : null;
+    $opening_balance = (float)($_POST['opening_balance'] ?? 0);
 
     try {
         $repo = new CustomerRepository($pdo);
         $service = new CustomerService($repo);
 
-        $service->addCustomer($name, $phone, $debt_limit);
+        $service->addCustomer($name, $phone, $debt_limit, $opening_balance);
         header("Location: ../customers.php");
         exit;
     } catch (Exception $e) {

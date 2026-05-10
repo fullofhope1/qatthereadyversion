@@ -5,7 +5,7 @@ include 'includes/header.php';
 
 
 <?php
-$today = date('Y-m-d');
+$today = getOperationalDate();
 $user_id = $_SESSION['user_id'];
 $user_role = $_SESSION['role'];
 
@@ -25,8 +25,8 @@ $totalDebts = $pdo->prepare("SELECT SUM(c.total_debt) FROM customers c JOIN user
 $totalDebts->execute([$user_role]);
 $totalDebtsTotal = $totalDebts->fetchColumn() ?: 0;
 
-// 3. Today's Expenses (Team level)
-$expenses = $expenseRepo->getTodayExpenses($today, $user_id, $user_role);
+// 3. Today's Expenses (Strict isolation)
+$expenses = $expenseRepo->getTodayExpenses($today, $user_id);
 $todayExpensesTotal = 0;
 foreach($expenses as $e) $todayExpensesTotal += $e['amount'];
 

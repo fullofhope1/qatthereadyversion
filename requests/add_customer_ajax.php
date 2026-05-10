@@ -7,12 +7,13 @@ header('Content-Type: application/json');
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $name = $_POST['name'] ?? '';
     $phone = $_POST['phone'] ?? '';
+    $opening_balance = (float)($_POST['opening_balance'] ?? 0);
 
     try {
         $repo = new CustomerRepository($pdo);
         $service = new CustomerService($repo);
 
-        $id = $service->addCustomer($name, $phone);
+        $id = $service->addCustomer($name, $phone, null, $opening_balance);
 
         echo json_encode(['success' => true, 'id' => $id]);
     } catch (Exception $e) {
