@@ -174,12 +174,25 @@ if (isset($_GET['success']) && isset($_GET['sale_id'])) {
                 <span>السعر: <b id="s_price">-</b></span>
             </div>
 
+            <!-- Staff Consumption Active Alert -->
+            <div id="staffModeAlert" class="alert alert-dark border-0 shadow-sm rounded-4 p-3 mb-3 d-none animate__animated animate__pulse animate__infinite" dir="rtl">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div class="fw-bold fs-5">
+                        <i class="fas fa-utensils me-2 text-warning"></i> 
+                        نمط تسجيل "تخزينة عمال" مفعل الآن
+                    </div>
+                    <button type="button" class="btn btn-sm btn-outline-light rounded-pill" onclick="location.reload()">
+                        إلغاء وتراجع
+                    </button>
+                </div>
+            </div>
+
             <!-- Cancel Button (Below Summary) -->
             <div class="text-start mb-3 d-flex gap-2">
-                <button type="button" class="btn btn-danger btn-sm rounded-pill px-3" onclick="location.reload()">
+                <button type="button" class="btn btn-danger btn-sm rounded-pill px-3" id="btnCancelSale" onclick="location.reload()">
                     إلغاء العملية / جديد (X)
                 </button>
-                <button type="button" class="btn btn-dark btn-sm rounded-pill px-3" onclick="startStaffConsumption()">
+                <button type="button" class="btn btn-dark btn-sm rounded-pill px-3" id="btnStaffMode" onclick="startStaffConsumption()">
                     <i class="fas fa-utensils me-1"></i> تسجيل تخزينة عمال
                 </button>
             </div>
@@ -420,7 +433,11 @@ if (isset($_GET['success']) && isset($_GET['sale_id'])) {
 
     function startStaffConsumption() {
         isStaffConsumption = true;
-        alert('نمط تسجيل تخزينة العمال مفعل. اختر النوع والوزن وسيتم الحفظ تلقائياً كفاقد.');
+        document.getElementById('staffModeAlert').classList.remove('d-none');
+        document.getElementById('summaryBar').classList.add('bg-danger');
+        document.getElementById('btnStaffMode').classList.add('d-none');
+        document.getElementById('btnCancelSale').innerText = 'خروج من نمط العمال';
+        document.getElementById('s_cust').innerText = 'تخزينة عمال';
         goTo(1);
     }
 
@@ -450,7 +467,17 @@ if (isset($_GET['success']) && isset($_GET['sale_id'])) {
             window.currentMaxKg = data.remaining_kg || 0;
             window.currentMaxUnits = data.remaining_units || 0;
 
-            goTo(3); // Go to Customer selection
+            if (isStaffConsumption) {
+                // SKIP CUSTOMER STEP FOR STAFF CONSUMPTION
+                const utype = document.getElementById('i_utype').value;
+                if (utype === 'weight') {
+                    goTo(4);
+                } else {
+                    setupUnitButtons(utype);
+                }
+            } else {
+                goTo(3); // Go to Customer selection
+            }
             return;
         } else if (step === 3) { // Customer
             document.getElementById('i_cust').value = data.id;
@@ -461,28 +488,7 @@ if (isset($_GET['success']) && isset($_GET['sale_id'])) {
             if (utype === 'weight') {
                 goTo(4);
             } else {
-                // Build dynamic unit buttons
-                const maxU = window._selectedRemainingUnits || 10;
-                const grid = document.getElementById('unitBtnsGrid');
-                grid.innerHTML = '';
-                const btnCount = Math.min(maxU, 8);
-                for (let i = 1; i <= btnCount; i++) {
-                    const b = document.createElement('button');
-                    b.type = 'button';
-                    b.className = 'circle-btn btn-weight';
-                    b.textContent = i;
-                    b.onclick = () => nextStep(4.5, i);
-                    grid.appendChild(b);
-                }
-                const manBtn = document.createElement('button');
-                manBtn.type = 'button';
-                manBtn.className = 'circle-btn bg-dark text-white';
-                manBtn.textContent = 'يدوي';
-                manBtn.onclick = () => document.getElementById('manualUnits').classList.remove('d-none');
-                grid.appendChild(manBtn);
-                document.getElementById('unitLabel').innerText = utype;
-                document.getElementById('unitMaxLabel').innerText = 'المتاح: ' + maxU + ' ' + utype;
-                goTo('4u');
+                setupUnitButtons(utype);
             }
             return;
         } else if (step === 4) { // Weight (Finalizing Weight)
@@ -605,9 +611,35 @@ if (isset($_GET['success']) && isset($_GET['sale_id'])) {
         });
     }
 
+    function setupUnitButtons(utype) {
+        // Build dynamic unit buttons
+        const maxU = window._selectedRemainingUnits || 10;
+        const grid = document.getElementById('unitBtnsGrid');
+        grid.innerHTML = '';
+        const btnCount = Math.min(maxU, 8);
+        for (let i = 1; i <= btnCount; i++) {
+            const b = document.createElement('button');
+            b.type = 'button';
+            b.className = 'circle-btn btn-weight';
+            b.textContent = i;
+            b.onclick = () => nextStep(4.5, i);
+            grid.appendChild(b);
+        }
+        const manBtn = document.createElement('button');
+        manBtn.type = 'button';
+        manBtn.className = 'circle-btn bg-dark text-white';
+        manBtn.textContent = 'يدوي';
+        manBtn.onclick = () => document.getElementById('manualUnits').classList.remove('d-none');
+        grid.appendChild(manBtn);
+        document.getElementById('unitLabel').innerText = utype;
+        document.getElementById('unitMaxLabel').innerText = 'المتاح: ' + maxU + ' ' + utype;
+        goTo('4u');
+    }
+
     function goTo(step) {
         document.querySelectorAll('.step-container').forEach(el => el.classList.remove('active'));
-        document.getElementById('step' + step).classList.add('active');
+        const target = document.getElementById('step' + step);
+        if (target) target.classList.add('active');
         currentStep = step;
     }
 
@@ -616,6 +648,13 @@ if (isset($_GET['success']) && isset($_GET['sale_id'])) {
             goTo(6);
             return;
         }
+        
+        // Handle Staff Mode Backwards
+        if (isStaffConsumption && targetStep === 3) {
+            goTo(2);
+            return;
+        }
+
         const utype = document.getElementById('i_utype').value;
         if (targetStep === 4 && utype !== 'weight') {
             goTo('4u');

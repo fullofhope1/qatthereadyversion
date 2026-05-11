@@ -1,0 +1,33 @@
+=== LEFTOVERS ===
+id=185 | status='Momsi_Day_2' | source=2026-04-15 | sale=2026-04-17 | kg=100.00 | units=0
+id=184 | status='Momsi_Day_2' | source=2026-04-15 | sale=2026-04-17 | kg=100.00 | units=0
+id=183 | status='Momsi_Day_2' | source=2026-04-15 | sale=2026-04-17 | kg=100.00 | units=0
+id=182 | status='Momsi_Day_2' | source=2026-04-15 | sale=2026-04-17 | kg=100.00 | units=0
+id=181 | status='Momsi_Day_2' | source=2026-04-15 | sale=2026-04-17 | kg=100.00 | units=0
+id=180 | status='Momsi_Day_2' | source=2026-04-15 | sale=2026-04-17 | kg=100.00 | units=0
+id=179 | status='Auto_Dropped' | source=2026-04-14 | sale=2026-04-15 | kg=99.00 | units=0
+id=178 | status='Auto_Dropped' | source=2026-04-14 | sale=2026-04-15 | kg=0.00 | units=1000
+id=177 | status='Auto_Dropped' | source=2026-04-14 | sale=2026-04-15 | kg=0.00 | units=100
+id=176 | status='Auto_Dropped' | source=2026-04-14 | sale=2026-04-15 | kg=100.00 | units=0
+id=175 | status='Auto_Dropped' | source=2026-04-14 | sale=2026-04-15 | kg=99.30 | units=0
+id=174 | status='Auto_Dropped' | source=2026-04-14 | sale=2026-04-15 | kg=20.00 | units=0
+id=173 | status='Auto_Dropped' | source=2026-04-14 | sale=2026-04-15 | kg=0.00 | units=120
+id=172 | status='Auto_Dropped' | source=2026-04-14 | sale=2026-04-15 | kg=0.00 | units=88
+id=171 | status='Auto_Dropped' | source=2026-04-14 | sale=2026-04-15 | kg=19.00 | units=0
+id=170 | status='Auto_Dropped' | source=2026-04-14 | sale=2026-04-15 | kg=0.00 | units=15
+id=169 | status='Auto_Dropped' | source=2026-04-14 | sale=2026-04-15 | kg=0.00 | units=120
+id=168 | status='Auto_Dropped' | source=2026-04-14 | sale=2026-04-15 | kg=18.75 | units=0
+id=167 | status='Auto_Dropped' | source=2026-04-14 | sale=2026-04-15 | kg=0.00 | units=95
+id=166 | status='Auto_Dropped' | source=2026-04-14 | sale=2026-04-15 | kg=20.00 | units=0
+
+=== PURCHASES ===
+purch_id=69 | status='Closed' | date=2026-04-15 | kg=100.00 | units=0
+purch_id=68 | status='Closed' | date=2026-04-15 | kg=100.00 | units=0
+purch_id=67 | status='Closed' | date=2026-04-15 | kg=100.00 | units=0
+purch_id=66 | status='Closed' | date=2026-04-15 | kg=100.50 | units=0
+purch_id=65 | status='Closed' | date=2026-04-15 | kg=100.00 | units=0
+purch_id=64 | status='Closed' | date=2026-04-15 | kg=100.00 | units=0
+purch_id=63 | status='Closed' | date=2026-04-15 | kg=100.00 | units=0
+purch_id=62 | status='Closed' | date=2026-04-15 | kg=0.00 | units=100
+purch_id=61 | status='Closed' | date=2026-04-15 | kg=0.00 | units=100
+purch_id=60 | status='Closed' | date=2026-04-15 | kg=100.00 | units=0

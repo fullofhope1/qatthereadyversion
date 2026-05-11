@@ -1,0 +1,263 @@
+﻿Array
+(
+    [0] => Array
+        (
+            [Field] => id
+            [Type] => int(11)
+            [Null] => NO
+            [Key] => PRI
+            [Default] => 
+            [Extra] => auto_increment
+        )
+
+    [1] => Array
+        (
+            [Field] => sale_date
+            [Type] => date
+            [Null] => YES
+            [Key] => MUL
+            [Default] => curdate()
+            [Extra] => 
+        )
+
+    [2] => Array
+        (
+            [Field] => due_date
+            [Type] => date
+            [Null] => YES
+            [Key] => 
+            [Default] => 
+            [Extra] => 
+        )
+
+    [3] => Array
+        (
+            [Field] => customer_id
+            [Type] => int(11)
+            [Null] => YES
+            [Key] => MUL
+            [Default] => 
+            [Extra] => 
+        )
+
+    [4] => Array
+        (
+            [Field] => qat_type_id
+            [Type] => int(11)
+            [Null] => YES
+            [Key] => MUL
+            [Default] => 
+            [Extra] => 
+        )
+
+    [5] => Array
+        (
+            [Field] => purchase_id
+            [Type] => int(11)
+            [Null] => YES
+            [Key] => 
+            [Default] => 
+            [Extra] => 
+        )
+
+    [6] => Array
+        (
+            [Field] => leftover_id
+            [Type] => int(11)
+            [Null] => YES
+            [Key] => MUL
+            [Default] => 
+            [Extra] => 
+        )
+
+    [7] => Array
+        (
+            [Field] => qat_status
+            [Type] => enum('Tari','Momsi','Leftover','Leftover1','Leftover2')
+            [Null] => YES
+            [Key] => 
+            [Default] => Tari
+            [Extra] => 
+        )
+
+    [8] => Array
+        (
+            [Field] => weight_grams
+            [Type] => decimal(10,2)
+            [Null] => NO
+            [Key] => 
+            [Default] => 
+            [Extra] => 
+        )
+
+    [9] => Array
+        (
+            [Field] => weight_kg
+            [Type] => decimal(10,3)
+            [Null] => YES
+            [Key] => 
+            [Default] => 
+            [Extra] => STORED GENERATED
+        )
+
+    [10] => Array
+        (
+            [Field] => unit_type
+            [Type] => enum('weight','┘é╪¿╪╢╪⌐','┘é╪▒╪╖╪º╪│')
+            [Null] => NO
+            [Key] => 
+            [Default] => weight
+            [Extra] => 
+        )
+
+    [11] => Array
+        (
+            [Field] => quantity_units
+            [Type] => int(11)
+            [Null] => NO
+            [Key] => 
+            [Default] => 0
+            [Extra] => 
+        )
+
+    [12] => Array
+        (
+            [Field] => price
+            [Type] => decimal(10,2)
+            [Null] => NO
+            [Key] => 
+            [Default] => 
+            [Extra] => 
+        )
+
+    [13] => Array
+        (
+            [Field] => paid_amount
+            [Type] => decimal(10,2)
+            [Null] => YES
+            [Key] => 
+            [Default] => 0.00
+            [Extra] => 
+        )
+
+    [14] => Array
+        (
+            [Field] => discount
+            [Type] => decimal(10,2)
+            [Null] => YES
+            [Key] => 
+            [Default] => 0.00
+            [Extra] => 
+        )
+
+    [15] => Array
+        (
+            [Field] => refund_amount
+            [Type] => decimal(10,2)
+            [Null] => YES
+            [Key] => 
+            [Default] => 0.00
+            [Extra] => 
+        )
+
+    [16] => Array
+        (
+            [Field] => payment_method
+            [Type] => enum('Cash','Debt','Internal Transfer','Kuraimi Deposit','Jayb Deposit')
+            [Null] => NO
+            [Key] => 
+            [Default] => 
+            [Extra] => 
+        )
+
+    [17] => Array
+        (
+            [Field] => transfer_sender
+            [Type] => varchar(100)
+            [Null] => YES
+            [Key] => 
+            [Default] => 
+            [Extra] => 
+        )
+
+    [18] => Array
+        (
+            [Field] => transfer_receiver
+            [Type] => varchar(100)
+            [Null] => YES
+            [Key] => 
+            [Default] => 
+            [Extra] => 
+        )
+
+    [19] => Array
+        (
+            [Field] => transfer_number
+            [Type] => varchar(100)
+            [Null] => YES
+            [Key] => 
+            [Default] => 
+            [Extra] => 
+        )
+
+    [20] => Array
+        (
+            [Field] => transfer_company
+            [Type] => varchar(100)
+            [Null] => YES
+            [Key] => 
+            [Default] => 
+            [Extra] => 
+        )
+
+    [21] => Array
+        (
+            [Field] => is_paid
+            [Type] => tinyint(1)
+            [Null] => YES
+            [Key] => 
+            [Default] => 1
+            [Extra] => 
+        )
+
+    [22] => Array
+        (
+            [Field] => is_returned
+            [Type] => tinyint(1)
+            [Null] => YES
+            [Key] => 
+            [Default] => 0
+            [Extra] => 
+        )
+
+    [23] => Array
+        (
+            [Field] => debt_type
+            [Type] => enum('Daily','Monthly','Yearly','Deferred')
+            [Null] => YES
+            [Key] => 
+            [Default] => 
+            [Extra] => 
+        )
+
+    [24] => Array
+        (
+            [Field] => notes
+            [Type] => text
+            [Null] => YES
+            [Key] => 
+            [Default] => 
+            [Extra] => 
+        )
+
+    [25] => Array
+        (
+            [Field] => created_at
+            [Type] => timestamp
+            [Null] => NO
+            [Key] => 
+            [Default] => current_timestamp()
+            [Extra] => 
+        )
+
+)

@@ -269,7 +269,9 @@ foreach ($expenses as $e) {
                                     <span class="input-group-text"><i class="fas fa-credit-card"></i></span>
                                     <select name="payment_method" class="form-select" required>
                                         <option value="Cash">نقد (كاش)</option>
-                                        <option value="Transfer">تحويل (إلكتروني)</option>
+                                        <?php if ($isSuperAdmin): ?>
+                                            <option value="Transfer">تحويل (إلكتروني)</option>
+                                        <?php endif; ?>
                                     </select>
                                 </div>
                             </div>
@@ -293,8 +295,6 @@ foreach ($expenses as $e) {
                                 <span class="input-group-text"><i class="fas fa-coins"></i></span>
                                 <select name="currency" class="form-select" required>
                                     <option value="YER">ريال يمني (YER)</option>
-                                    <option value="SAR">ريال سعودي (SAR)</option>
-                                    <option value="USD">دولار أمريكي (USD)</option>
                                 </select>
                             </div>
                         </div>
@@ -310,7 +310,7 @@ foreach ($expenses as $e) {
                         <div class="mb-3">
                             <span class="floating-label">المبلغ</span>
                             <div class="input-group">
-                                <span class="input-group-text fw-bold">$</span>
+                                <span class="input-group-text fw-bold">YER</span>
                                 <input type="number" step="0.01" name="amount" class="form-control form-control-lg fw-bold text-primary" placeholder="0" required>
                             </div>
                         </div>
@@ -468,7 +468,9 @@ foreach ($expenses as $e) {
                             <label class="floating-label">طريقة الدفع</label>
                             <select name="payment_method" id="edit_exp_method" class="form-select" required>
                                 <option value="Cash">نقد (كاش)</option>
-                                <option value="Transfer">تحويل (إلكتروني)</option>
+                                <?php if ($isSuperAdmin): ?>
+                                    <option value="Transfer">تحويل (إلكتروني)</option>
+                                <?php endif; ?>
                             </select>
                         </div>
                     </div>
@@ -500,8 +502,6 @@ foreach ($expenses as $e) {
                         <label class="floating-label">العملة</label>
                         <select name="currency" id="edit_dep_currency" class="form-select" required>
                             <option value="YER">ريال يمني (YER)</option>
-                            <option value="SAR">ريال سعودي (SAR)</option>
-                            <option value="USD">دولار أمريكي (USD)</option>
                         </select>
                     </div>
                     <div class="mb-3">

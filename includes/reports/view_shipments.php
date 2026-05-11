@@ -46,7 +46,7 @@
                                     <div class="badge bg-light text-dark border extra-small"><?= htmlspecialchars($ship['qat_type']) ?></div>
                                 </td>
                                 <td>
-                                    <div class="small text-muted">متوقع: <?= number_format($ship['expected_quantity_kg'], 2) ?></div>
+                                    <div class="small text-muted">متوقع: <?= number_format($ship['expected_kg'], 2) ?></div>
                                     <div class="fw-bold">مستلم: <?= number_format($ship['received_kg'], 2) ?></div>
                                 </td>
                                 <td class="<?= $shortageClass ?>">

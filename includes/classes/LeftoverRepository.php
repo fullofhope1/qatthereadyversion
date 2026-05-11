@@ -56,8 +56,8 @@ class LeftoverRepository extends BaseRepository
 
     public function create(array $data)
     {
-        $sql = "INSERT INTO leftovers (source_date, purchase_id, qat_type_id, weight_kg, unit_type, quantity_units, status, decision_date, sale_date, notes) 
-                VALUES (:source_date, :purchase_id, :qat_type_id, :weight_kg, :unit_type, :quantity_units, :status, :decision_date, :sale_date, :notes)";
+        $sql = "INSERT INTO leftovers (source_date, purchase_id, qat_type_id, weight_kg, unit_type, quantity_units, status, decision_date, sale_date, created_by, notes) 
+                VALUES (:source_date, :purchase_id, :qat_type_id, :weight_kg, :unit_type, :quantity_units, :status, :decision_date, :sale_date, :created_by, :notes)";
         return $this->execute($sql, $data);
     }
 

@@ -22,13 +22,21 @@ class StaffRepository extends BaseRepository
         $current_role = $role ?: 'super_admin';
 
         // Join with users table to filter by the role group (Merchant team vs Supplier team)
+        $params = [];
+        if ($current_role === 'super_admin') {
+            $roleFilter = " AND (u.role IN ('super_admin', 'user') OR u.role IS NULL)";
+        } else {
+            $roleFilter = " AND u.role = ?";
+            $params[] = $current_role;
+        }
+
         $sql = "SELECT s.*,
                 (SELECT SUM(amount) FROM expenses WHERE staff_id = s.id AND category = 'Staff' AND expense_date = CURRENT_DATE) as current_withdrawals
                 FROM staff s
                 JOIN users u ON s.created_by = u.id
-                WHERE u.role = ? $statusFilter
+                WHERE 1=1 $roleFilter $statusFilter
                 ORDER BY s.is_active DESC, s.name ASC";
-        return $this->fetchAll($sql, [$current_role]);
+        return $this->fetchAll($sql, $params);
     }
 
     public function update($id, array $data)

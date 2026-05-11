@@ -1,0 +1,2 @@
+﻿<h2>QA Auditor Execution Log (Standard Repositories)</h2>
+<span style='color:red'>[FATAL ERROR] SQLSTATE[23000]: Integrity constraint violation: 1451 Cannot delete or update a parent row: a foreign key constraint fails (`qat_erp`.`sales`, CONSTRAINT `sales_ibfk_1` FOREIGN KEY (`customer_id`) REFERENCES `customers` (`id`))</span><br>

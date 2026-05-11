@@ -8,6 +8,7 @@ require '../includes/classes/CustomerRepository.php';
 require '../includes/classes/SaleRepository.php';
 require '../includes/classes/PurchaseRepository.php';
 require '../includes/classes/LeftoverRepository.php';
+require '../includes/classes/ReportRepository.php';
 require '../includes/classes/RefundService.php';
 
 requireLogin();
@@ -16,6 +17,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $refundRepo = new RefundRepository($pdo);
     $customerRepo = new CustomerRepository($pdo);
     $saleRepo = new SaleRepository($pdo);
+    $purchaseRepo = new PurchaseRepository($pdo);
+    $leftoverRepo = new LeftoverRepository($pdo);
     $reportRepo = new ReportRepository($pdo);
 
     $service = new RefundService($refundRepo, $customerRepo, $saleRepo, $purchaseRepo, $leftoverRepo, $reportRepo);

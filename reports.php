@@ -403,7 +403,7 @@ if (in_array($view, ['Summary', 'Printable', 'Dashboard'])) {
         });
     ?>
         <div class="row g-3 mb-4 no-print">
-            <div class="col-md-6">
+            <div class="col-md-4">
                 <div class="card shadow-sm border-0 border-start border-warning border-5 h-100">
                     <div class="card-body">
                         <h6 class="text-muted small fw-bold">إجمالي الخصم من الديون (تسويات)</h6>
@@ -414,14 +414,25 @@ if (in_array($view, ['Summary', 'Printable', 'Dashboard'])) {
                     </div>
                 </div>
             </div>
-            <div class="col-md-6">
+            <div class="col-md-4">
                 <div class="card shadow-sm border-0 border-start border-danger border-5 h-100">
                     <div class="card-body">
-                        <h6 class="text-muted small fw-bold">إجمالي المطالب المخرجة (كاش)</h6>
+                        <h6 class="text-muted small fw-bold">إجمالي المبالغ المخرجة (كاش)</h6>
                         <?php 
                         $cashSum = array_sum(array_map(function($r){ return $r['refund_type'] === 'Cash' ? $r['amount'] : 0; }, $filteredList));
                         ?>
                         <h3 class="mb-0 fw-bold text-danger"><?= number_format($cashSum) ?> <small>ريال</small></h3>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card shadow-sm border-0 border-start border-primary border-5 h-100">
+                    <div class="card-body">
+                        <h6 class="text-muted small fw-bold">إجمالي المبالغ المخرجة (حوالات)</h6>
+                        <?php 
+                        $transferSum = array_sum(array_map(function($r){ return ($r['refund_type'] !== 'Cash' && $r['refund_type'] !== 'Debt') ? $r['amount'] : 0; }, $filteredList));
+                        ?>
+                        <h3 class="mb-0 fw-bold text-primary"><?= number_format($transferSum) ?> <small>ريال</small></h3>
                     </div>
                 </div>
             </div>
@@ -459,9 +470,13 @@ if (in_array($view, ['Summary', 'Printable', 'Dashboard'])) {
                                             <span class="badge bg-warning-subtle text-warning border border-warning px-3 rounded-pill">
                                                 <i class="fas fa-file-invoice-dollar me-1"></i> خصمـ مديونية
                                             </span>
-                                        <?php else: ?>
+                                        <?php elseif ($r['refund_type'] === 'Cash'): ?>
                                             <span class="badge bg-danger-subtle text-danger border border-danger px-3 rounded-pill">
                                                 <i class="fas fa-money-bill-wave me-1"></i> دفعـ نقدًا (كاش)
+                                            </span>
+                                        <?php else: ?>
+                                            <span class="badge bg-primary-subtle text-primary border border-primary px-3 rounded-pill">
+                                                <i class="fas fa-exchange-alt me-1"></i> حوالة بنكية
                                             </span>
                                         <?php endif; ?>
                                     </td>
@@ -474,6 +489,7 @@ if (in_array($view, ['Summary', 'Printable', 'Dashboard'])) {
                                     <td class="text-end fw-bold text-dark pe-4"><?= number_format($r['amount']) ?></td>
                                 </tr>
                             <?php endforeach; ?>
+
                             <?php if (empty($filteredList)): ?>
                                 <tr><td colspan="5" class="text-center py-5 text-muted">لا توجد سجلات.</td></tr>
                             <?php endif; ?>

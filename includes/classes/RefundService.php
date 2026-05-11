@@ -110,16 +110,10 @@ class RefundService
 
                 // C. Debt check
                 if ($refundType === 'Debt') {
-                    // 1. Check specific sale debt
-                    $remainingSaleDebt = (float)$sale['price'] - (float)$sale['paid_amount'] - (float)$sale['refund_amount'];
-                    if ($amount > $remainingSaleDebt + 0.01) {
-                        throw new Exception("المبلغ المرتجع من الدين ($amount) أكبر من الدين المتبقي للفاتورة (" . number_format($remainingSaleDebt) . ").");
-                    }
-                    
-                    // 2. Check customer total debt
+                    // Check customer total debt (Includes opening balance + all sales)
                     $customerDebt = $this->customerRepo->getDebtBalance($data['customer_id']);
-                    if ($amount > $customerDebt + 0.01) {
-                        throw new Exception("المبلغ المرتجع ($amount) أكبر من إجمالي دين العميل (" . number_format($customerDebt) . ").");
+                    if ($amount > $customerDebt + 0.1) {
+                        throw new Exception("المبلغ المرتجع ($amount) أكبر من إجمالي مديونية الزبون (" . number_format($customerDebt) . ").");
                     }
                 }
                 

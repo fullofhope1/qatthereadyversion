@@ -9,7 +9,7 @@ $view = $_GET['view'] ?? 'summary';
 $staffId = $_GET['staff_id'] ?? null;
 
 if ($view === 'summary') {
-    $summary = $reportRepo->getStaffBalanceSummary();
+    $summary = $reportRepo->getStaffBalanceSummary($_SESSION['role'] ?? 'super_admin');
 } else {
     $staff = $staffRepo->getById($staffId);
     if (!$staff) die("الموظف غير موجود");

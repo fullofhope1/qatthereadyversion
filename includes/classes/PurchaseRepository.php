@@ -160,9 +160,9 @@ class PurchaseRepository extends BaseRepository
         $stmt = $this->pdo->prepare("SELECT 
             p.unit_type, p.quantity_kg, p.received_units,
             (SELECT COALESCE(SUM(COALESCE(weight_kg, weight_grams/1000) - COALESCE(returned_kg, 0)), 0) FROM sales WHERE purchase_id = ? AND is_returned = 0) as sold_kg,
-            (SELECT COALESCE(SUM(weight_kg), 0) FROM leftovers WHERE purchase_id = ? AND status IN ('Dropped', 'Auto_Dropped', 'Transferred_Next_Day', 'Auto_Momsi', 'Momsi_Day_1', 'Momsi_Day_2', 'Closed')) as managed_kg,
+            (SELECT COALESCE(SUM(weight_kg), 0) FROM leftovers WHERE purchase_id = ? AND status NOT IN ('Reception_Loss', 'Momsi_Day_1', 'Momsi_Day_2', 'Transferred_Next_Day', 'Auto_Momsi')) as managed_kg,
             (SELECT COALESCE(SUM(quantity_units - COALESCE(returned_units, 0)), 0) FROM sales WHERE purchase_id = ? AND is_returned = 0) as sold_units,
-            (SELECT COALESCE(SUM(quantity_units), 0) FROM leftovers WHERE purchase_id = ? AND status IN ('Dropped', 'Auto_Dropped', 'Transferred_Next_Day', 'Auto_Momsi', 'Momsi_Day_1', 'Momsi_Day_2', 'Closed')) as managed_units
+            (SELECT COALESCE(SUM(quantity_units), 0) FROM leftovers WHERE purchase_id = ? AND status NOT IN ('Reception_Loss', 'Momsi_Day_1', 'Momsi_Day_2', 'Transferred_Next_Day', 'Auto_Momsi')) as managed_units
             FROM purchases p WHERE p.id = ?");
         $stmt->execute([$purchaseId, $purchaseId, $purchaseId, $purchaseId, $purchaseId]);
         $row = $stmt->fetch(PDO::FETCH_ASSOC);

@@ -24,13 +24,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             throw new Exception("المبلغ يجب أن يكون أكبر من صفر");
         }
 
-        // ✅ FIX #1: Real-time debt — calculated directly from unpaid sales (not cached total_debt)
+        // ✅ FIX #1: Real-time debt — includes (Opening Balance + Unpaid Sales)
         $debtStmt = $pdo->prepare(
-            "SELECT COALESCE(SUM(price - paid_amount - COALESCE(refund_amount,0)),0)
-             FROM sales WHERE customer_id = ? AND is_paid = 0 AND is_returned = 0"
+            "SELECT 
+                (SELECT COALESCE(opening_balance, 0) - COALESCE(paid_opening_balance, 0) FROM customers WHERE id = ?) +
+                (SELECT COALESCE(SUM(price - paid_amount - COALESCE(refund_amount, 0)), 0) FROM sales WHERE customer_id = ? AND is_paid = 0 AND is_returned = 0)
+            as actual_debt"
         );
-        $debtStmt->execute([$customer_id]);
+        $debtStmt->execute([$customer_id, $customer_id]);
         $realDebt = (float)$debtStmt->fetchColumn();
+
 
         if ($amount > $realDebt + 0.01) {
             throw new Exception("مبلغ السداد (" . number_format($amount) . ") أكبر من الدين الفعلي (" . number_format($realDebt) . ")");

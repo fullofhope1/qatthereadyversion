@@ -1,40 +1,32 @@
-# QAT ERP SYSTEM RULES
+# قواعد المنطق المحاسبي والمالي للنظام (SYSTEM_RULES)
 
-This document serves as a persistent memory for the AI assistant to ensure core business logic and architectural patterns are preserved during updates.
+هذا الملف يمثل المرجع الأساسي لكافة المعادلات الحسابية والمنطق البرمجي لضمان دقة التقارير المالية.
 
-## 1. Data Isolation
-*   **Admins vs. Super Admins**: Expenses and Deposits are isolated by `created_by`. 
-*   Admins must ONLY see their own records.
-*   Super Admins must ONLY see their own records.
-*   *Note*: Some dashboard metrics (Sales, Debts, Purchases) remain at the "Role Group" level (e.g., Admin sees all Admin-group data) to support team collaboration, unless specified otherwise.
+## 1. إدارة المخزون والتوالف
+- **التوالف (Waste):** يتم احتساب التوالف (تخزينة العمال + القات المستبعد) كخسارة في تكلفة البضاعة.
+- **تخزينة العمال:** تُحسب ضمن "التوالف المسموح به" وتُخصم من كمية المخزون المتاحة للبيع ولكنها تظهر في التقارير كقيمة مستبعدة (Dropped Cost).
+- **المخزون المتبقي:** يتم حسابه حركياً (إجمالي المشتريات - المبيعات - التوالف).
 
-## 2. Operational Day Boundary (The 6:20 AM Rule)
-*   The business day does NOT end at midnight. It ends at **6:20 AM**.
-*   Any records (Sales, Expenses, etc.) created between 12:00 AM and 05:59 AM belong to the **Previous Calendar Day**.
-*   Use the `getOperationalDate()` helper function from `config/db.php` for all date-related defaults.
-*   Auto-closing logic in `includes/auto_close.php` also respects this boundary.
+## 2. حساب صافي الأرباح (Real Profit)
+- **المعادلة:** `صافي الربح = (إجمالي المبيعات - إجمالي المرتجعات والتعويضات) - تكلفة البضاعة المباعة (COGS) - قيمة التوالف - المصاريف التشغيلية`.
+- **قاعدة التاريخ:** يتم خصم المرتجعات والتعويضات من أرباح **اليوم الذي حدثت فيه العملية فعلياً** (تاريخ سجل المرتجع)، وليس تاريخ الفاتورة الأصلية. هذا يضمن مطابقة الأرباح للسيولة النقدية اليومية.
 
-## 3. Optional Fields
-*   **Phone Numbers**: Phone numbers for Customers and Providers are **OPTIONAL**. 
-*   Do NOT enforce `required` attributes or non-empty validation in backend services (`CustomerService`, `ProviderService`).
-*   Validation for format (digits only) should only occur if the field is NOT empty.
+## 3. الرصيد الإلكتروني (Bank/Transfer Balance)
+- **المعادلة:** `الرصيد الإلكتروني المتبقي = (مبيعات الحوالات + سدادات الحوالات) - (مصاريف الحوالات + مرتجعات الحوالات + تعويضات الحوالات)`.
+- **العزل:** أي عملية تتم عبر "الحوالة" يجب أن تُخصم/تُضاف للرصيد الإلكتروني فقط ولا تؤثر إطلاقاً على "الرصيد المتبقي في الدرج (الكاش)".
 
-## 4. Sales UI Logic
-*   **Qat Types Visibility**: Qat types should only be visible in the Sales pages (`sales.php`, `sales_leftovers_1.php`, `sales_leftovers_2.php`) if there is active, non-zero stock available for that type on the current operational date.
-*   If a type has no shipment or its stock is depleted, it should be hidden from the selection grid.
+## 4. رصيد الدرج (Cash Drawer Balance)
+- **المعادلة:** `الرصيد المتبقي في الدرج = (المبيعات النقدية + سدادات الديون النقدية) - (المصاريف النقدية + المرتجعات النقدية + التعويضات النقدية + الإيداعات البنكية المخرجة من الدرج)`.
+- **التدقيق:** يجب التأكد دائماً من أن `total_compensations` (الإجمالي) يُطرح منه `total_transfer_compensations` عند حساب رصيد الدرج الفعلي.
 
-## 5. Contact Information
-*   **Location**: إب - شارع الدائري سوق السلام (Ibb - Al-Dayri St - Al-Salam Market).
-*   **WhatsApp**: +967 774456261
-*   **Call**: +967 775065459
-*   **Social Media**: Facebook and Instagram only. (Snapchat and YouTube removed).
+## 5. مديونية العملاء وسداد الديون
+- **حساب الدين:** `إجمالي مديونية العميل = (الرصيد الافتتاحي - ما سُدد منه) + (إجمالي المبيعات الآجلة - ما سُدد منها - المرتجعات/التعويضات المرتبطة بها)`.
+- **التحقق من السداد:** عند تسجيل سداد، يجب التحقق من المبلغ مقابل "الدين الشامل" (بما في ذلك الرصيد الافتتاحي) وليس فقط المبيعات المسجلة في جدول المبيعات.
 
-## 6. Development Workflow
-*   **NO GITHUB UPLOADS**: Do not upload code to GitHub without explicit user authorization.
-*   **System Integrity**: Always check `SYSTEM_RULES.md` before making changes to ensure no regressions occur.
+## 6. مبيعات الآجل (Debt Sales)
+- يتم حساب "الديون الجديدة اليوم" بناءً على أي عملية بيع تمت بطريقة دفع "Debt" خلال اليوم المختار.
+- يتم حساب "إجمالي مديونية العملاء (كافة الأوقات)" بشكل ديناميكي لحظي لضمان المطابقة مع صفحة إدارة الديون.
 
-## 7. Roles & Permissions (Specific Restrictions)
-*   **Receiving/Verifier Roles**: Users with these sub-roles (Super Admin group) are strictly for operational reception.
-*   They are **BLOCKED** from seeing the dashboard.php (لوحة التحكم) to prevent unauthorized access to overall financial summaries.
-*   Their home link is redirected to settings.php or index.php.
-*   Ensure the no_dash array in includes/header.php includes these roles.
+## 7. العملة الموحدة
+- النظام يعمل حصرياً بالريال اليمني (YER). أي إيداع أو سداد يجب أن يكون بالريال اليمني فقط، مع إزالة خيارات العملات الأخرى من واجهات الإدخال الحساسة (مثل الإيداع البنكي).
+

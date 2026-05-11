@@ -9,8 +9,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $purchase_id = (int)($_POST['purchase_id'] ?? 0);
     $amount = (float)($_POST['amount'] ?? 0);
     $unit_type = $_POST['unit_type'] ?? 'weight';
-    $reason = $_POST['reason'] ?? 'Dropped'; // Default to Dropped (Talf)
+    $reason = !empty($_POST['reason']) ? $_POST['reason'] : 'Dropped'; 
     $notes = $_POST['notes'] ?? '';
+
+    // FIX: Fix existing records that were saved with empty status due to the previous bug
+    $pdo->exec("UPDATE leftovers SET status = 'Staff_Consumption' WHERE (status = '' OR status IS NULL) AND notes LIKE '%تخزينة%'");
 
     if ($purchase_id <= 0 || $amount <= 0) {
         echo json_encode(['success' => false, 'error' => 'بيانات غير مكتملة']);
@@ -35,6 +38,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'status' => $reason,
             'decision_date' => $today,
             'sale_date' => $today,
+            'created_by' => $_SESSION['user_id'] ?? null,
             'notes' => $notes
         ];
 

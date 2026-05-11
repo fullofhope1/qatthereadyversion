@@ -9,8 +9,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $name  = trim($_POST['name']  ?? '');
     $phone = trim($_POST['phone'] ?? '');
 
-    if (empty($id) || empty($name) || empty($phone)) {
-        echo json_encode(['success' => false, 'message' => 'جميع الحقول مطلوبة']);
+    if (empty($id) || empty($name)) {
+        echo json_encode(['success' => false, 'message' => 'الاسم مطلوب']);
         exit;
     }
 

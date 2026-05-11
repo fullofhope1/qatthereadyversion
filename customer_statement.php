@@ -240,7 +240,19 @@ $business_name = "القادري و ماجد - لأجود أنواع القات"
             </thead>
             <tbody>
                 <?php
-                $runningBalance = 0;
+                $runningBalance = (float)$customer['opening_balance'];
+                if ($runningBalance != 0): ?>
+                    <tr class="table-light">
+                        <td class="text-center">-</td>
+                        <td class="text-center fw-bold">رصيد افتتاحي</td>
+                        <td>رصيد ما قبل النظام</td>
+                        <td class="text-end"><?= $runningBalance > 0 ? number_format($runningBalance) : '-' ?></td>
+                        <td class="text-end"><?= $runningBalance < 0 ? number_format(abs($runningBalance)) : '-' ?></td>
+                        <td class="text-end running-balance"><?= number_format($runningBalance) ?></td>
+                    </tr>
+                <?php endif; ?>
+
+                <?php
                 foreach ($transactions as $t):
                     $runningBalance += ($t['debit'] - $t['credit']);
                 ?>

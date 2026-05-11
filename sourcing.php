@@ -485,9 +485,9 @@ $shipments = $purchaseRepo->getTodayShipmentsByUserId($today, $user_id);
                     <input type="text" id="new_provider_name" class="form-control rounded-3" required>
                 </div>
                 <div class="mb-3">
-                    <label class="small fw-bold mb-1">رقم الهاتف <span class="text-danger">*</span></label>
+                    <label class="small fw-bold mb-1">رقم الهاتف (اختياري)</label>
                     <div class="input-group">
-                        <input type="tel" id="new_provider_phone" class="form-control rounded-start-3" required inputmode="numeric" placeholder="7xxxxxxxxx" enterkeyhint="done">
+                        <input type="tel" id="new_provider_phone" class="form-control rounded-start-3" inputmode="numeric" placeholder="7xxxxxxxxx" enterkeyhint="done">
                         <button type="button" class="btn btn-warning rounded-end-3" onclick="pickContact('new_provider_phone')">
                             <i class="fas fa-address-book"></i>
                         </button>
@@ -501,7 +501,48 @@ $shipments = $purchaseRepo->getTodayShipmentsByUserId($today, $user_id);
     </div>
 </div>
 
+<!-- Discount Modal -->
+<div class="modal fade" id="discountModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 rounded-4 shadow">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title fw-bold"><i class="fas fa-percent me-2"></i>إضافة خصم على الشحنة</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="requests/add_purchase_discount.php" method="POST">
+                <div class="modal-body p-4">
+                    <input type="hidden" name="purchase_id" id="discount_purchase_id">
+                    
+                    <div class="text-center mb-4">
+                        <div class="bg-light p-3 rounded-4">
+                            <span class="text-muted small d-block mb-1">بيانات الشحنة</span>
+                            <h6 id="discount_info" class="fw-bold text-dark mb-0">-</h6>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="small fw-bold mb-1">مبلغ الخصم (ريال)</label>
+                        <input type="number" name="discount_amount" class="form-control form-control-lg rounded-3 border-danger text-center fw-bold" required min="1" placeholder="0">
+                        <div class="form-text text-danger x-small mt-2">
+                            <i class="fas fa-info-circle me-1"></i> سيتم خصم هذا المبلغ من إجمالي مديونية المورد وتكلفة البضاعة.
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="small fw-bold mb-1">سبب الخصم (اختياري)</label>
+                        <textarea name="discount_reason" class="form-control rounded-3" rows="2" placeholder="مثلاً: جودة ضعيفة، وزن ناقص..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 p-4 pt-0">
+                    <button type="submit" class="btn btn-danger btn-lg w-100 rounded-pill fw-bold shadow-sm">تطبيق الخصم</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 <!-- Edit Shipment Modal -->
+
 <div class="modal fade" id="editShipmentModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 rounded-4 shadow">
@@ -753,8 +794,8 @@ $shipments = $purchaseRepo->getTodayShipmentsByUserId($today, $user_id);
         const name = document.getElementById('new_provider_name').value.trim();
         const phone = document.getElementById('new_provider_phone').value.trim();
 
-        if (!name || !phone) return alert('جميع الحقول مطلوبة');
-        if (!/^\d{7,15}$/.test(phone)) return alert('رقم الهاتف يجب أن يحتوي على أرقام فقط');
+        if (!name) return alert('اسم المورد مطلوب');
+        if (phone && !/^\d{7,15}$/.test(phone)) return alert('رقم الهاتف يجب أن يحتوي على أرقام فقط');
 
         const formData = new FormData();
         formData.append('name', name);

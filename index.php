@@ -370,11 +370,11 @@ if (!empty($freshProducts)) {
         <div class="text-center animate__animated animate__fadeInUp" style="animation-delay: 0.5s;">
             <p class="fw-bold text-muted mb-4 fs-5"><i class="fas fa-globe me-2 text-secondary"></i> لا تفوّت جديدنا، تابعنا على الشبكات الاجتماعية:</p>
             <div class="d-flex justify-content-center flex-wrap gap-4 pb-3">
-                <a href="https://facebook.com/yourpage" target="_blank" class="social-btn facebook">
+                <a href="https://www.facebook.com/share/1D4qehndSj/" target="_blank" class="social-btn facebook">
                     <i class="fab fa-facebook-f"></i>
                     <span>فيسبوك</span>
                 </a>
-                <a href="https://instagram.com/yourpage" target="_blank" class="social-btn instagram">
+                <a href="https://www.instagram.com/alqadri.2025?igsh=MW94N2NvOW85eGpveg==" target="_blank" class="social-btn instagram">
                     <i class="fab fa-instagram"></i>
                     <span>إنستغرام</span>
                 </a>

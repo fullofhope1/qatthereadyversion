@@ -62,8 +62,10 @@ class ReportService extends BaseService
     {
         $summary = $this->reportRepo->getCashSummary($reportType, $date, $month, $year, $userId, $role);
         // Calculate remaining cash using correct keys from the updated repository
-        $summary['remaining_cash'] = (($summary['cash_sales'] ?? 0) + ($summary['wasel_cash'] ?? 0)) - (($summary['total_cash_expenses'] ?? 0) + ($summary['total_cash_refunds'] ?? 0) + ($summary['total_compensations'] ?? 0) + ($summary['deposits_yer'] ?? 0));
-        $summary['remaining_transfer'] = (($summary['transfer_sales'] ?? 0) + ($summary['wasel_transfer'] ?? 0)) - ($summary['total_transfer_expenses'] ?? 0);
+        $summary['remaining_cash'] = (($summary['cash_sales'] ?? 0) + ($summary['wasel_cash'] ?? 0)) - (($summary['total_cash_expenses'] ?? 0) + ($summary['total_cash_refunds'] ?? 0) + (($summary['total_compensations'] ?? 0) - ($summary['total_transfer_compensations'] ?? 0)) + ($summary['deposits_yer'] ?? 0));
+        $summary['remaining_transfer'] = (($summary['transfer_sales'] ?? 0) + ($summary['wasel_transfer'] ?? 0)) - (($summary['total_transfer_expenses'] ?? 0) + ($summary['total_transfer_refunds'] ?? 0) + ($summary['total_transfer_compensations'] ?? 0));
+
+
         return $summary;
     }
 

@@ -346,16 +346,16 @@ $custJson = json_encode($customers);
             }
         };
 
-        // Debt validation: If no remaining debt on this sale, force Cash refund
+        // Debt validation: Allow 'Debt' refund if the customer has ANY total debt
         const rtDebt = document.getElementById('rtDebt');
         const rtCash = document.getElementById('rtCash');
-        const remDebt = parseFloat(sale.remaining_debt);
+        const customerTotalDebt = currentCustomerTotalDebt;
 
-        if (remDebt <= 1) {
+        if (customerTotalDebt <= 1) {
             rtDebt.disabled = true;
             rtCash.checked = true;
             rtDebt.nextElementSibling.classList.add('text-muted');
-            rtDebt.nextElementSibling.innerHTML = "خصم من الدين (غير متاح)";
+            rtDebt.nextElementSibling.innerHTML = "خصم من الدين (لا يوجد دين)";
         } else {
             rtDebt.disabled = false;
             rtDebt.checked = true;
@@ -394,10 +394,10 @@ $custJson = json_encode($customers);
             return false;
         }
 
-        // 3. Debt validation
+        // 3. Debt validation: check against TOTAL customer debt
         if (refundType === 'Debt') {
-            if (amount > currentSaleRemDebt + 0.1) {
-                alert("المبلغ المدخل أكبر من المديونية المتبقية على هذه الفاتورة. يرجى اختيار 'استرجاع نقدي' وليس من الدين.");
+            if (amount > currentCustomerTotalDebt + 0.1) {
+                alert(`المبلغ المدخل أكبر من إجمالي مديونية الزبون (${currentCustomerTotalDebt.toLocaleString()} ريال). يرجى اختيار 'استرجاع نقدي' أو تقليل المبلغ.`);
                 e.preventDefault();
                 return false;
             }

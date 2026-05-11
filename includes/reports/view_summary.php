@@ -62,10 +62,16 @@ $cashInHandResult = $cashSummary['remaining_cash'] ?? 0;
                             <td class="pe-4 py-3 text-end fw-bold text-info fs-5"><?= number_format($cashSummary['wasel_transfer']) ?></td>
                         </tr>
 
-                        <!-- 5. GLOBAL DEBT -->
+                        <!-- 5. NEW DEBT TODAY -->
+                        <tr class="bg-danger bg-opacity-10 clickable-row" onclick="showDetails('DebtSales', 'الديون الجديدة اليوم')" style="cursor: pointer;">
+                            <td class="ps-4 py-3 fw-bold text-danger"><i class="fas fa-user-plus me-3"></i> 5. إجمالي الديون الجديدة (اليوم)</td>
+                            <td class="pe-4 py-3 text-end fw-bold text-danger fs-5"><?= number_format($cashSummary['today_debt_sales']) ?></td>
+                        </tr>
+
+                        <!-- GLOBAL DEBT - REAL TIME -->
                         <tr class="border-top border-4 border-white">
-                            <td class="ps-4 py-3 bg-danger bg-opacity-10 fw-bold text-danger"><i class="fas fa-users-cog me-3"></i> 5. إجمالي المديونية (كافة العملاء)</td>
-                            <td class="pe-4 py-3 text-end fw-bold text-danger fs-5 bg-danger bg-opacity-10"><?= number_format($cashSummary['total_global_debt']) ?></td>
+                            <td class="ps-4 py-3 bg-secondary bg-opacity-10 fw-bold text-dark"><i class="fas fa-users-cog me-3"></i> إجمالي مديونية العملاء (كافة الأوقات)</td>
+                            <td class="pe-4 py-3 text-end fw-bold text-dark fs-5 bg-secondary bg-opacity-10"><?= number_format($cashSummary['total_global_debt']) ?></td>
                         </tr>
 
                         <!-- 6. MOMSI SALES -->
@@ -107,6 +113,12 @@ $cashInHandResult = $cashSummary['remaining_cash'] ?? 0;
                             <td class="pe-4 py-3 text-end fw-bold text-dark fs-5"><?= number_format($totals['inventory_value'] ?? 0) ?></td>
                         </tr>
 
+                        <!-- 11. PURCHASE DISCOUNTS -->
+                        <tr class="bg-success bg-opacity-10 border-top border-4 border-white">
+                            <td class="ps-4 py-3 fw-bold text-success"><i class="fas fa-tag me-3"></i> 11. مكرر: إجمالي الخصومات المكتسبة (من الموردين)</td>
+                            <td class="pe-4 py-3 text-end fw-bold text-success fs-5"><?= number_format($totals['total_purchase_discounts'] ?? 0) ?></td>
+                        </tr>
+
                         <!-- 10. PROFIT -->
                         <tr class="bg-success text-white border-top border-4 border-white shadow-sm">
                             <td class="ps-4 py-4 fw-bold fs-5"><i class="fas fa-chart-line me-3"></i> 12. صافي الربح أو الخسارة الحقيقي</td>
@@ -116,18 +128,9 @@ $cashInHandResult = $cashSummary['remaining_cash'] ?? 0;
                         <!-- 11. DEPOSITS -->
                         <tr>
                             <td class="ps-4 py-3"><i class="fas fa-vault text-secondary me-3"></i> 13. إجمالي المبلغ المسلم (الإيداعات):</td>
-                            <td class="pe-4 py-3 text-end p-0">
-                                <div class="px-4 py-3 bg-light rounded-start h-100">
-                                    <div class="d-flex justify-content-between mb-2 small border-bottom pb-1">
-                                        <span class="text-muted">يمني:</span> <span class="fw-bold fs-6"><?= number_format($cashSummary['deposits_yer']) ?></span>
-                                    </div>
-                                    <div class="d-flex justify-content-between mb-2 small border-bottom pb-1">
-                                        <span class="text-muted">سعودي:</span> <span class="fw-bold fs-6"><?= number_format($cashSummary['deposits_sar'], 2) ?></span>
-                                    </div>
-                                    <div class="d-flex justify-content-between small">
-                                        <span class="text-muted">دولار:</span> <span class="fw-bold fs-6"><?= number_format($cashSummary['deposits_usd'], 2) ?></span>
-                                    </div>
-                                </div>
+                            <td class="pe-4 py-3 text-end">
+                                <span class="fw-bold fs-5 text-dark"><?= number_format($cashSummary['deposits_yer']) ?></span>
+                                <small class="text-muted ms-1">ريال</small>
                             </td>
                         </tr>
 

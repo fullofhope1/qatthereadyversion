@@ -1,6 +1,7 @@
 <?php
 require 'config/db.php';
 require 'includes/classes/BaseRepository.php';
+require 'includes/classes/BaseService.php';
 require 'includes/classes/ReportRepository.php';
 require 'includes/classes/ReportService.php';
 require 'includes/classes/ProviderRepository.php';

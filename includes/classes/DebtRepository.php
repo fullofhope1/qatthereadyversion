@@ -8,7 +8,19 @@ class DebtRepository extends BaseRepository
         $sql = "";
         $params = [];
 
-        if ($type == 'Daily') {
+        if ($type == 'All') {
+            // 'All' tab: Include Opening Balance + All Unpaid Sales
+            $sql = "SELECT c.id, c.name, c.phone,
+                    (COALESCE(c.opening_balance, 0) - COALESCE(c.paid_opening_balance, 0) + COALESCE(SUM(s.price - s.paid_amount - COALESCE(s.refund_amount, 0)), 0)) as due_amount,
+                    COUNT(CASE WHEN s.due_date < CURDATE() THEN 1 END) as overdue_count,
+                    MIN(s.due_date) as earliest_due
+                    FROM customers c
+                    LEFT JOIN sales s ON c.id = s.customer_id AND s.is_paid = 0
+                    WHERE c.is_deleted = 0
+                    GROUP BY c.id
+                    HAVING due_amount > 0
+                    ORDER BY due_amount DESC";
+        } elseif ($type == 'Daily') {
             $sql = "SELECT c.id, c.name, c.phone,
                     SUM(s.price - s.paid_amount - COALESCE(s.refund_amount,0)) as due_amount,
                     COUNT(CASE WHEN s.due_date < CURDATE() THEN 1 END) as overdue_count,
@@ -46,16 +58,6 @@ class DebtRepository extends BaseRepository
                     FROM sales s
                     JOIN customers c ON s.customer_id = c.id
                     WHERE s.is_paid = 0 AND s.debt_type = 'Yearly' AND s.due_date <= CURDATE()
-                    GROUP BY c.id ORDER BY due_amount DESC";
-        } else {
-            // 'All' tab: Sum everything unpaid
-            $sql = "SELECT c.id, c.name, c.phone,
-                    SUM(s.price - s.paid_amount - COALESCE(s.refund_amount,0)) as due_amount,
-                    COUNT(CASE WHEN s.due_date < CURDATE() THEN 1 END) as overdue_count,
-                    MIN(s.due_date) as earliest_due
-                    FROM sales s
-                    JOIN customers c ON s.customer_id = c.id
-                    WHERE s.is_paid = 0
                     GROUP BY c.id ORDER BY due_amount DESC";
         }
 

@@ -1,0 +1,3 @@
+# Prevent all access to backups directory from the web
+Order deny,allow
+Deny from all
