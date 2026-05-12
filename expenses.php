@@ -27,11 +27,20 @@ $deposits = $depositRepo->getTodayDeposits($today, $user_id);
 
 // Restored Categories list with role-based filtering
 $isSuperAdmin = ($_SESSION['role'] ?? 'admin') === 'super_admin';
-$categories = ['إيجار', 'كهرباء', 'ماء', 'تغذية', 'نقل'];
-if ($isSuperAdmin) {
-    $categories[] = 'تسديد مورد';
+$sub_role = $_SESSION['sub_role'] ?? 'full';
+
+// Precise Role Logic: Partner ONLY does Provider Payments
+if ($sub_role === 'partner') {
+    $categories = ['تسديد مورد'];
+} else {
+    $categories = ['إيجار', 'كهرباء', 'ماء', 'تغذية', 'نقل', 'أخرى'];
+    // If you want 'full' super_admin to also have 'تسديد مورد', add it here.
+    // Based on previous request "اشيلها من الsuper admin", I'm leaving it out for 'full'.
 }
-$categories[] = 'أخرى';
+
+// Permissions for UI elements (Deposits, Transfers)
+$canManageDeposits = $isSuperAdmin && $sub_role !== 'partner';
+$canUseTransfer = $isSuperAdmin; // Everyone who can access expenses can use transfer now (or we can refine later)
 
 $totalExp = 0;
 foreach ($expenses as $e) {
@@ -183,7 +192,7 @@ foreach ($expenses as $e) {
 
 <div class="container py-4">
     <div class="text-center">
-        <?php if ($isSuperAdmin): ?>
+        <?php if ($canManageDeposits): ?>
         <div class="type-toggle">
             <button class="type-btn active-exp" id="btnExp" onclick="switchTab('expense')">
                 <i class="fas fa-arrow-up-right-from-square"></i> مصاريف (خرج)
@@ -215,7 +224,9 @@ foreach ($expenses as $e) {
                                     <?php foreach ($categories as $cat): ?>
                                         <option value="<?= htmlspecialchars($cat) ?>"><?= htmlspecialchars($cat) ?></option>
                                     <?php endforeach; ?>
-                                    <option value="Staff">سحبيات موظف</option>
+                                    <?php if ($sub_role !== 'partner'): ?>
+                                        <option value="Staff">سحبيات موظف</option>
+                                    <?php endif; ?>
                                 </select>
                             </div>
                         </div>
@@ -269,7 +280,7 @@ foreach ($expenses as $e) {
                                     <span class="input-group-text"><i class="fas fa-credit-card"></i></span>
                                     <select name="payment_method" class="form-select" required>
                                         <option value="Cash">نقد (كاش)</option>
-                                        <?php if ($isSuperAdmin): ?>
+                                        <?php if ($canUseTransfer): ?>
                                             <option value="Transfer">تحويل (إلكتروني)</option>
                                         <?php endif; ?>
                                     </select>
@@ -334,8 +345,8 @@ foreach ($expenses as $e) {
     </div>
 
     <!-- Tables Area -->
-    <div class="row g-4 <?= $isSuperAdmin ? '' : 'justify-content-center' ?>">
-        <div class="col-md-<?= $isSuperAdmin ? '6' : '8' ?>">
+    <div class="row g-4 <?= $canManageDeposits ? '' : 'justify-content-center' ?>">
+        <div class="col-md-<?= $canManageDeposits ? '6' : '8' ?>">
             <div class="card-list shadow-sm">
                 <div class="d-flex justify-content-between align-items-center mb-4">
                     <h6 class="mb-0 fw-bold text-danger border-bottom border-2 border-danger pb-1">مصاريف اليوم</h6>
@@ -377,7 +388,7 @@ foreach ($expenses as $e) {
             </div>
         </div>
 
-        <?php if ($isSuperAdmin): ?>
+        <?php if ($canManageDeposits): ?>
         <div class="col-md-6">
             <div class="card-list shadow-sm">
                 <h6 class="mb-4 fw-bold text-primary border-bottom border-2 border-primary pb-1">المبالغ الموردة</h6>
@@ -434,7 +445,9 @@ foreach ($expenses as $e) {
                             <?php foreach ($categories as $cat): ?>
                                 <option value="<?= htmlspecialchars($cat) ?>"><?= htmlspecialchars($cat) ?></option>
                             <?php endforeach; ?>
-                            <option value="Staff">سحبيات موظف</option>
+                            <?php if ($sub_role !== 'partner'): ?>
+                                <option value="Staff">سحبيات موظف</option>
+                            <?php endif; ?>
                         </select>
                     </div>
                     <div class="mb-3" id="edit_staff_group" style="display:none;">
@@ -468,7 +481,7 @@ foreach ($expenses as $e) {
                             <label class="floating-label">طريقة الدفع</label>
                             <select name="payment_method" id="edit_exp_method" class="form-select" required>
                                 <option value="Cash">نقد (كاش)</option>
-                                <?php if ($isSuperAdmin): ?>
+                                <?php if ($canUseTransfer): ?>
                                     <option value="Transfer">تحويل (إلكتروني)</option>
                                 <?php endif; ?>
                             </select>
@@ -650,6 +663,15 @@ foreach ($expenses as $e) {
         document.getElementById('edit_staff_group').style.display = (cat === 'Staff' ? 'block' : 'none');
         document.getElementById('edit_provider_group').style.display = (cat === 'تسديد مورد' ? 'block' : 'none');
     }
+
+    // Trigger initial state check
+    document.addEventListener('DOMContentLoaded', function() {
+        const catSelect = document.getElementById('catSelect');
+        if (catSelect) {
+            const event = new Event('change');
+            catSelect.dispatchEvent(event);
+        }
+    });
 
     function editDeposit(id, recipient, notes, amount, currency) {
         document.getElementById('edit_dep_id').value = id;

@@ -362,7 +362,7 @@ if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
                             <li class="nav-item"><a class="nav-link <?= navActive('staff.php', $current_page) ?>" href="<?= Router::getUrl('staff.php') ?>"><i class="fas fa-user-tie me-1"></i> الموظفين</a></li>
                         <?php endif; ?>
 
-                        <?php if ($is_full || $sub_role === 'receiving' || $sub_role === 'sales_debts' || $sub_role === 'seller'): ?>
+                        <?php if ($is_full || $sub_role === 'receiving' || $sub_role === 'sales_debts' || $sub_role === 'seller' || $sub_role === 'partner'): ?>
                             <li class="nav-item"><a class="nav-link <?= navActive('expenses.php', $current_page) ?>" href="<?= Router::getUrl('expenses.php') ?>"><i class="fas fa-wallet me-1"></i> المصاريف</a></li>
                         <?php endif; ?>
 

@@ -15,7 +15,7 @@ class DebtRepository extends BaseRepository
                     COUNT(CASE WHEN s.due_date < CURDATE() THEN 1 END) as overdue_count,
                     MIN(s.due_date) as earliest_due
                     FROM customers c
-                    LEFT JOIN sales s ON c.id = s.customer_id AND s.is_paid = 0
+                    LEFT JOIN sales s ON c.id = s.customer_id AND s.is_paid = 0 AND s.is_returned = 0
                     WHERE c.is_deleted = 0
                     GROUP BY c.id
                     HAVING due_amount > 0
@@ -27,7 +27,7 @@ class DebtRepository extends BaseRepository
                     MIN(s.due_date) as earliest_due
                     FROM sales s
                     JOIN customers c ON s.customer_id = c.id
-                    WHERE s.is_paid = 0 AND s.debt_type = 'Daily' AND s.due_date <= CURDATE()
+                    WHERE s.is_paid = 0 AND s.debt_type = 'Daily' AND s.due_date <= CURDATE() AND s.is_returned = 0
                     GROUP BY c.id ORDER BY due_amount DESC";
         } elseif ($type == 'Upcoming') {
             $sql = "SELECT c.id, c.name, c.phone,
@@ -35,8 +35,7 @@ class DebtRepository extends BaseRepository
                     0 as overdue_count, null as earliest_due
                     FROM sales s
                     JOIN customers c ON s.customer_id = c.id
-                    WHERE s.is_paid = 0 
-                    AND (
+                    WHERE s.is_paid = 0 AND s.is_returned = 0                     AND (
                         (s.debt_type = 'Daily' AND s.due_date > CURDATE())
                         OR s.debt_type = 'Deferred'
                     )
@@ -48,7 +47,7 @@ class DebtRepository extends BaseRepository
                     MIN(s.due_date) as earliest_due
                     FROM sales s
                     JOIN customers c ON s.customer_id = c.id
-                    WHERE s.is_paid = 0 AND s.debt_type = 'Monthly' AND s.due_date <= CURDATE()
+                    WHERE s.is_paid = 0 AND s.debt_type = 'Monthly' AND s.due_date <= CURDATE() AND s.is_returned = 0
                     GROUP BY c.id ORDER BY due_amount DESC";
         } elseif ($type == 'Yearly') {
             $sql = "SELECT c.id, c.name, c.phone,
@@ -57,7 +56,7 @@ class DebtRepository extends BaseRepository
                     MIN(s.due_date) as earliest_due
                     FROM sales s
                     JOIN customers c ON s.customer_id = c.id
-                    WHERE s.is_paid = 0 AND s.debt_type = 'Yearly' AND s.due_date <= CURDATE()
+                    WHERE s.is_paid = 0 AND s.debt_type = 'Yearly' AND s.due_date <= CURDATE() AND s.is_returned = 0
                     GROUP BY c.id ORDER BY due_amount DESC";
         }
 
@@ -68,7 +67,7 @@ class DebtRepository extends BaseRepository
     {
         $newDueDate = date('Y-m-d', strtotime('+1 day'));
         $sql = "UPDATE sales SET due_date = ? 
-                WHERE customer_id = ? AND is_paid = 0 AND debt_type = ? AND due_date <= CURDATE()";
+                WHERE customer_id = ? AND is_paid = 0 AND debt_type = ? AND due_date <= CURDATE() AND is_returned = 0";
         return $this->execute($sql, [$newDueDate, $customerId, $debtType]);
     }
 
@@ -82,7 +81,7 @@ class DebtRepository extends BaseRepository
                 SET c.total_debt = (COALESCE(c.opening_balance, 0) - COALESCE(c.paid_opening_balance, 0)) + (
                     SELECT COALESCE(SUM(s.price - s.paid_amount - COALESCE(s.refund_amount, 0)), 0)
                     FROM sales s 
-                    WHERE s.customer_id = c.id AND s.is_paid = 0
+                    WHERE s.customer_id = c.id AND s.is_paid = 0 AND s.is_returned = 0
                 )";
         return $this->execute($sql);
     }
@@ -111,7 +110,7 @@ class DebtRepository extends BaseRepository
     {
         $sql = "SELECT id, price, paid_amount, COALESCE(refund_amount, 0) as refund_amount 
                 FROM sales 
-                WHERE customer_id = ? AND payment_method = 'Debt' AND is_paid = 0 
+                WHERE customer_id = ? AND payment_method = 'Debt' AND is_paid = 0 AND is_returned = 0 
                 ORDER BY sale_date ASC, id ASC";
         return $this->fetchAll($sql, [$customerId]);
     }

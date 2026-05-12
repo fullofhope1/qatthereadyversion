@@ -322,7 +322,12 @@ if (!empty($freshProducts)) {
                     </div>
 
                     <div class="position-relative z-1 text-center mt-auto mb-3">
-                        <div class="fw-bold mb-3" style="font-size: 1.5rem; text-shadow: 0 2px 4px rgba(0,0,0,0.1);">إب - شارع الدائري سوق السلام</div>
+                        <a href="https://www.google.com/maps/place/%D9%85%D8%A7%D8%AC%D8%AF+%D9%88+%D8%A7%D9%84%D9%82%D8%A7%D8%AF%D8%B1%D9%8A+%D9%84%D9%84%D9%82%D8%A7%D8%AF%D8%B1%D9%8A+%D9%84%D9%84%D9%82%D8%AAT%E2%80%AD/@13.9591085,44.166979,16z/data=!4m10!1m2!2m1!1z2KfZhNmK2YXZhiDYp9ioINiz2YjZgiDYp9mE2LPZhNin2YUg2YXYrdmEINin2YTZgtin2K_YsdmK!3m6!1s0x161ceb6ce6360fdf:0xd257666c370d57ce!8m2!3d13.9587983!4d44.1716561!15sCjnYp9mE2YrZhdmGINin2Kgg2LPZiNmCINin2YTYs9mE2KfZhSDZhdit2YQg2KfZhNmC2KfYr9ix2YqSAQZtYXJrZXTgAQA!16s%2Fg%2F11rgbn4lj5?entry=ttu&g_ep=EgoyMDI2MDUwNi4wIKXMDSoASAFQAw%3D%3D" target="_blank" class="text-white text-decoration-none transition-hover d-block">
+                            <div class="fw-bold mb-3" style="font-size: 1.5rem; text-shadow: 0 2px 4px rgba(0,0,0,0.1);">إب - شارع الدائري - سوق السلام</div>
+                            <div class="bg-white bg-opacity-10 py-2 rounded-pill border border-light border-opacity-25 small fw-bold">
+                                <i class="fas fa-directions me-1"></i> عرض على الخريطة
+                            </div>
+                        </a>
                     </div>
                 </div>
             </div>
