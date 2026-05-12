@@ -20,6 +20,22 @@ if (!$customer) {
     exit;
 }
 
+// ✅ AUTO-REPAIR: Recalculate actual debt to fix any cache drift (like the 21,000 vs 7,000 issue)
+$actualDebtStmt = $pdo->prepare("
+    SELECT 
+        (COALESCE(opening_balance, 0) - COALESCE(paid_opening_balance, 0)) + 
+        (SELECT COALESCE(SUM(price - paid_amount - COALESCE(refund_amount, 0)), 0) 
+         FROM sales WHERE customer_id = ? AND is_paid = 0 AND is_returned = 0) as real_debt
+    FROM customers WHERE id = ?
+");
+$actualDebtStmt->execute([$id, $id]);
+$realDebt = (float)$actualDebtStmt->fetchColumn();
+
+if (abs($realDebt - (float)$customer['total_debt']) > 0.01) {
+    $pdo->prepare("UPDATE customers SET total_debt = ? WHERE id = ?")->execute([$realDebt, $id]);
+    $customer['total_debt'] = $realDebt; // Update for current page display
+}
+
 // Fetch Payment History
 $payStmt = $pdo->prepare("SELECT * FROM payments WHERE customer_id = ? ORDER BY payment_date DESC LIMIT 10");
 $payStmt->execute([$id]);

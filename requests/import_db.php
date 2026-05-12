@@ -39,10 +39,15 @@ try {
     try {
         // Enforce emulate prepares so we can run multiple statements in one query if driver supports it
         $pdo->setAttribute(PDO::ATTR_EMULATE_PREPARES, true);
-
         $pdo->exec("SET FOREIGN_KEY_CHECKS=0;");
 
-        // Execute the entire dump
+        // 1. Drop all existing tables to avoid "Table already exists" errors
+        $tables = $pdo->query("SHOW TABLES")->fetchAll(PDO::FETCH_COLUMN);
+        foreach ($tables as $table) {
+            $pdo->exec("DROP TABLE IF EXISTS `$table` ");
+        }
+
+        // 2. Execute the entire dump
         $pdo->exec($sqlContent);
 
         $pdo->exec("SET FOREIGN_KEY_CHECKS=1;");
