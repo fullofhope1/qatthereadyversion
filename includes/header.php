@@ -254,11 +254,19 @@ if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
 
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4 shadow-sm">
         <div class="container-fluid">
-            <a class="navbar-brand fw-bold d-flex align-items-center" href="<?= $home_link ?>">
-                <img src="logo.jpg" alt="Logo" class="me-2 rounded-circle shadow-sm" style="width: 40px; height: 40px; object-fit: cover; border: 2px solid var(--brand-gradient);">
-                <span class="brand-text">القادري و ماجد</span>
-                <span class="ms-2 small d-none d-sm-inline text-light opacity-75">لأجود أنواع القات</span>
-            </a>
+            <?php if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin'): ?>
+                <div class="navbar-brand fw-bold d-flex align-items-center" style="cursor: default;">
+                    <img src="logo.jpg" alt="Logo" class="me-2 rounded-circle shadow-sm" style="width: 40px; height: 40px; object-fit: cover; border: 2px solid var(--brand-gradient);">
+                    <span class="brand-text">القادري و ماجد</span>
+                    <span class="ms-2 small d-none d-sm-inline text-light opacity-75">لأجود أنواع القات</span>
+                </div>
+            <?php else: ?>
+                <a class="navbar-brand fw-bold d-flex align-items-center" href="<?= $home_link ?>">
+                    <img src="logo.jpg" alt="Logo" class="me-2 rounded-circle shadow-sm" style="width: 40px; height: 40px; object-fit: cover; border: 2px solid var(--brand-gradient);">
+                    <span class="brand-text">القادري و ماجد</span>
+                    <span class="ms-2 small d-none d-sm-inline text-light opacity-75">لأجود أنواع القات</span>
+                </a>
+            <?php endif; ?>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
             </button>

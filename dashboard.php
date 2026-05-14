@@ -40,27 +40,29 @@ $todayPurchasesTotal = $todayPurchases->fetchColumn() ?: 0;
     <div class="col-md-12">
         <h1 class="mb-4 text-center"><i class="fas fa-tachometer-alt me-2"></i> لوحة التحكم</h1>
         <div class="row">
-            <!-- Today's Sales -->
-            <div class="col-md-3">
-                <div class="card text-white bg-success mb-3 shadow">
-                    <div class="card-header"><i class="fas fa-shopping-cart me-1"></i> مبيعات اليوم</div>
-                    <div class="card-body">
-                        <h3 class="card-title"><?= number_format($todaySalesTotal) ?> ريال</h3>
-                        <a href="sales.php" class="btn btn-light btn-sm">عرض <i class="fas fa-arrow-left"></i></a>
+            <?php if ($_SESSION['role'] !== 'admin'): ?>
+                <!-- Today's Sales -->
+                <div class="col-md-3">
+                    <div class="card text-white bg-success mb-3 shadow">
+                        <div class="card-header"><i class="fas fa-shopping-cart me-1"></i> مبيعات اليوم</div>
+                        <div class="card-body">
+                            <h3 class="card-title"><?= number_format($todaySalesTotal) ?> ريال</h3>
+                            <a href="sales.php" class="btn btn-light btn-sm">عرض <i class="fas fa-arrow-left"></i></a>
+                        </div>
                     </div>
                 </div>
-            </div>
 
-            <!-- Total Debts -->
-            <div class="col-md-3">
-                <div class="card text-white bg-danger mb-3 shadow">
-                    <div class="card-header"><i class="fas fa-file-invoice-dollar me-1"></i> إجمالي الديون</div>
-                    <div class="card-body">
-                        <h3 class="card-title"><?= number_format($totalDebtsTotal) ?> ريال</h3>
-                        <a href="debts.php" class="btn btn-light btn-sm">عرض <i class="fas fa-arrow-left"></i></a>
+                <!-- Total Debts -->
+                <div class="col-md-3">
+                    <div class="card text-white bg-danger mb-3 shadow">
+                        <div class="card-header"><i class="fas fa-file-invoice-dollar me-1"></i> إجمالي الديون</div>
+                        <div class="card-body">
+                            <h3 class="card-title"><?= number_format($totalDebtsTotal) ?> ريال</h3>
+                            <a href="debts.php" class="btn btn-light btn-sm">عرض <i class="fas fa-arrow-left"></i></a>
+                        </div>
                     </div>
                 </div>
-            </div>
+            <?php endif; ?>
 
             <!-- Today's Expenses -->
             <div class="col-md-3">
@@ -94,11 +96,15 @@ $todayPurchasesTotal = $todayPurchases->fetchColumn() ?: 0;
                     </div>
                     <div class="card-body">
                         <div class="d-flex flex-wrap gap-2 justify-content-center">
-                            <a href="sales.php" class="btn btn-success btn-lg"><i class="fas fa-plus-circle me-2"></i> مبيعات جديدة</a>
+                            <?php if ($_SESSION['role'] !== 'admin'): ?>
+                                <a href="sales.php" class="btn btn-success btn-lg"><i class="fas fa-plus-circle me-2"></i> مبيعات جديدة</a>
+                            <?php endif; ?>
                             <a href="purchases.php" class="btn btn-primary btn-lg"><i class="fas fa-truck me-2"></i> استلام بضاعة</a>
                             <a href="expenses.php" class="btn btn-warning btn-lg"><i class="fas fa-wallet me-2"></i> إضافة مصروف</a>
                             <a href="reports.php" class="btn btn-info btn-lg text-white"><i class="fas fa-chart-line me-2"></i> عرض التقارير</a>
-                            <a href="closing.php" class="btn btn-danger btn-lg"><i class="fas fa-calendar-check me-2"></i> إغلاق اليوم</a>
+                            <?php if ($_SESSION['role'] !== 'admin'): ?>
+                                <a href="closing.php" class="btn btn-danger btn-lg"><i class="fas fa-calendar-check me-2"></i> إغلاق اليوم</a>
+                            <?php endif; ?>
                             <?php if ($_SESSION['role'] === 'super_admin'): ?>
                                 <a href="manage_ads.php" class="btn btn-dark btn-lg border-info"><i class="fas fa-ad me-2"></i> إدارة الإعلانات</a>
                                 <a href="manage_products.php" class="btn btn-dark btn-lg border-info"><i class="fas fa-leaf me-2"></i> إدارة المنتجات</a>
